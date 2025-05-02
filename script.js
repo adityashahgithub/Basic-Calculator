@@ -24,8 +24,11 @@ function initCalculator() {
     buttons.forEach(button => {
         button.addEventListener('click', () => {
             button.classList.add('button-clicked');
+            // Add button-active class for press effect
+            button.classList.add('button-active');
             setTimeout(() => {
                 button.classList.remove('button-clicked');
+                button.classList.remove('button-active');
             }, 200);
         });
     });
@@ -34,6 +37,12 @@ function initCalculator() {
     themeToggle.addEventListener('change', () => {
         document.body.classList.toggle('light-theme');
         playToggleSound();
+        
+        // Add animation for theme change
+        document.querySelector('.calculator').classList.add('theme-transition');
+        setTimeout(() => {
+            document.querySelector('.calculator').classList.remove('theme-transition');
+        }, 500);
     });
 
     // Help modal functionality
@@ -62,6 +71,9 @@ function initCalculator() {
 
     // Add quantum effects
     createQuantumBits();
+    
+    // Create background particles
+    createBackgroundParticles();
 
     // Add button animation effect
     buttons.forEach(button => {
@@ -78,14 +90,80 @@ function initCalculator() {
             button.appendChild(ripple);
             
             setTimeout(() => {
-                button.removeChild(ripple);
+                if (button.contains(ripple)) {
+                    button.removeChild(ripple);
+                }
             }, 600);
             
             button.classList.add('button-clicked');
+            button.classList.add('button-active');
             setTimeout(() => {
                 button.classList.remove('button-clicked');
+                button.classList.remove('button-active');
             }, 200);
         });
+    });
+    
+    // Add memory indicator to the calculator
+    const memoryIndicator = document.createElement('div');
+    memoryIndicator.className = 'memory-indicator';
+    memoryIndicator.id = 'memory-indicator';
+    memoryIndicator.textContent = 'M';
+    document.querySelector('.display-container').appendChild(memoryIndicator);
+    
+    // Animate buttons sequentially on load
+    setTimeout(() => {
+        animateButtonsSequentially();
+    }, 500);
+}
+
+/**
+ * Creates floating background particles
+ */
+function createBackgroundParticles() {
+    const universe = document.querySelector('.universe');
+    const particleCount = 30;
+    
+    for (let i = 0; i < particleCount; i++) {
+        const particle = document.createElement('div');
+        particle.className = 'particle';
+        
+        // Random position
+        const posX = Math.random() * window.innerWidth;
+        const posY = Math.random() * window.innerHeight;
+        particle.style.left = `${posX}px`;
+        particle.style.top = `${posY}px`;
+        
+        // Random size
+        const size = Math.random() * 4 + 1;
+        particle.style.width = `${size}px`;
+        particle.style.height = `${size}px`;
+        
+        // Random animation duration
+        const duration = Math.random() * 30 + 10;
+        particle.style.animation = `float-particle ${duration}s linear infinite`;
+        
+        // Random animation delay
+        const delay = Math.random() * 20;
+        particle.style.animationDelay = `${delay}s`;
+        
+        universe.appendChild(particle);
+    }
+}
+
+/**
+ * Animates buttons sequentially for an attractive loading effect
+ */
+function animateButtonsSequentially() {
+    const allButtons = document.querySelectorAll('button');
+    
+    allButtons.forEach((button, index) => {
+        setTimeout(() => {
+            button.classList.add('button-active');
+            setTimeout(() => {
+                button.classList.remove('button-active');
+            }, 100);
+        }, index * 50);
     });
 }
 
@@ -132,8 +210,63 @@ function playToggleSound() {
  * Updates the calculator display with current values
  */
 function updateDisplay() {
-    displayElement.textContent = currentInput;
+    // Format the number properly for display
+    displayElement.textContent = formatNumberForDisplay(currentInput);
     equationElement.textContent = previousInput;
+    
+    // Add typing effect for equation
+    if (previousInput !== '') {
+        equationElement.classList.add('typing');
+        setTimeout(() => {
+            equationElement.classList.remove('typing');
+        }, 1000);
+    }
+}
+
+/**
+ * Formats a number for better display in the calculator
+ * @param {string} value - The number to format
+ * @returns {string} - The formatted number
+ */
+function formatNumberForDisplay(value) {
+    // Handle error messages
+    if (typeof value === 'string' && (value === 'Error' || value.startsWith('Error:'))) {
+        return value;
+    }
+    
+    // Convert to number and handle NaN
+    let num = parseFloat(value);
+    if (isNaN(num)) {
+        return '0';
+    }
+    
+    // For large numbers, use scientific notation
+    if (Math.abs(num) >= 10**14) {
+        return num.toExponential(8);
+    }
+    
+    // For decimal numbers with many digits
+    if (value.includes('.') && value.length > 14) {
+        // Limit decimal places to preserve readability
+        const parts = value.split('.');
+        const integerPart = parts[0];
+        let decimalPart = parts[1];
+        
+        // Keep decimals to fit within display
+        const maxDecimalDigits = 10;
+        if (decimalPart.length > maxDecimalDigits) {
+            decimalPart = decimalPart.substring(0, maxDecimalDigits);
+        }
+        
+        return `${integerPart}.${decimalPart}`;
+    }
+    
+    // Return formatted number with thousand separators for large integers
+    if (Number.isInteger(num) && Math.abs(num) >= 1000) {
+        return num.toLocaleString('en-US');
+    }
+    
+    return value;
 }
 
 /**
@@ -361,31 +494,37 @@ function handleFunction(functionName) {
             }
             break;
     }
+    
+    // Add memory indicator animation when memory functions are used
+    if (functionName.startsWith('memory')) {
+        const memoryIndicator = document.getElementById('memory-indicator');
+        
+        if (functionName === 'memory-clear') {
+            memoryIndicator.classList.remove('active');
+        } else {
+            memoryIndicator.classList.add('active');
+            
+            // Add pulse animation
+            memoryIndicator.style.animation = 'none';
+            setTimeout(() => {
+                memoryIndicator.style.animation = 'memory-pulse 2s infinite';
+            }, 10);
+        }
+    }
+    
     updateDisplay();
 }
 
 /**
- * Displays a memory indicator when memory is being used
+ * Displays memory indicator when memory has a value
  */
 function displayMemoryIndicator() {
-    // Create or update memory indicator
-    let memoryIndicator = document.getElementById('memory-indicator');
+    const memoryIndicator = document.getElementById('memory-indicator');
     
-    if (!memoryIndicator) {
-        memoryIndicator = document.createElement('div');
-        memoryIndicator.id = 'memory-indicator';
-        memoryIndicator.className = 'memory-indicator';
-        memoryIndicator.textContent = 'M';
-        document.querySelector('.display-container').appendChild(memoryIndicator);
-    }
-    
-    // Show or hide based on memory value
     if (memoryValue !== 0) {
-        memoryIndicator.style.display = 'block';
-        console.log("Memory indicator shown. Current memory value:", memoryValue);
+        memoryIndicator.classList.add('active');
     } else {
-        memoryIndicator.style.display = 'none';
-        console.log("Memory indicator hidden. Memory is empty.");
+        memoryIndicator.classList.remove('active');
     }
 }
 
@@ -417,6 +556,12 @@ function handleOperator(operator) {
     console.log("After handleOperator - currentInput:", currentInput, "previousInput:", previousInput);
     
     updateDisplay();
+    
+    // Add calculating effect for visual feedback
+    displayElement.classList.add('calculating');
+    setTimeout(() => {
+        displayElement.classList.remove('calculating');
+    }, 300);
 }
 
 /**
@@ -512,8 +657,15 @@ function calculateExpression() {
             throw new Error("Division by zero or other arithmetic error");
         }
         
-        // Format result to avoid extremely long decimals
-        currentInput = Math.round(result * 100000) / 100000 + '';
+        // Format result to avoid extremely long decimals but maintain precision
+        if (Math.abs(result) > 10**14) {
+            // Use scientific notation for very large numbers
+            currentInput = result.toExponential(8);
+        } else {
+            // Round to 12 decimal places to avoid floating point issues
+            currentInput = Math.round(result * 10**12) / 10**12 + '';
+        }
+        
         previousInput = '';
         
         // Trigger calculation success animation
@@ -552,13 +704,11 @@ function safeEval(expression) {
  * Animates the display on successful calculation
  */
 function animateCalculationSuccess() {
-    // Add success animation class
     displayElement.classList.add('calculation-success');
     
-    // Create particle burst effect
-    createParticleBurst();
+    // Create success particles
+    createParticleBurst(5, 'success-particle');
     
-    // Remove animation class after it completes
     setTimeout(() => {
         displayElement.classList.remove('calculation-success');
     }, 1000);
@@ -568,13 +718,11 @@ function animateCalculationSuccess() {
  * Animates the display on calculation error
  */
 function animateCalculationError() {
-    // Add error animation class
     displayElement.classList.add('calculation-error');
     
     // Create error particles
     createErrorParticles();
     
-    // Remove animation class after it completes
     setTimeout(() => {
         displayElement.classList.remove('calculation-error');
     }, 1000);
@@ -583,7 +731,7 @@ function animateCalculationError() {
 /**
  * Creates a particle burst effect on successful calculation
  */
-function createParticleBurst() {
+function createParticleBurst(count, className) {
     const container = document.querySelector('.calculator');
     const display = document.querySelector('.display');
     const rect = display.getBoundingClientRect();
@@ -594,9 +742,9 @@ function createParticleBurst() {
     const centerY = rect.top - containerRect.top + rect.height / 2;
     
     // Create particles
-    for (let i = 0; i < 20; i++) {
+    for (let i = 0; i < count; i++) {
         const particle = document.createElement('div');
-        particle.className = 'success-particle';
+        particle.className = className;
         
         // Random position offset
         const angle = Math.random() * Math.PI * 2;
@@ -710,13 +858,19 @@ function handleEqual() {
     // Use calculateExpression for all calculations to ensure proper order of operations
     calculateExpression();
     
-    // Add pulsing effect to the result
-    displayElement.style.animation = 'none';
-    void displayElement.offsetWidth; // Trigger reflow
-    displayElement.style.animation = 'pulse 1.5s 1';
+    // Add calculating class to display for animation during calculation
+    displayElement.classList.add('calculating');
+    
     setTimeout(() => {
-        displayElement.style.animation = '';
-    }, 1500);
+        displayElement.classList.remove('calculating');
+        
+        // After calculation, show success or error animation
+        if (isNaN(result)) {
+            animateCalculationError();
+        } else {
+            animateCalculationSuccess();
+        }
+    }, 300);
 }
 
 /**
@@ -841,9 +995,21 @@ function handleKeyboardInput(event) {
 function animateButton(selector) {
     const button = document.querySelector(selector);
     if (button) {
-        button.classList.add('button-clicked');
+        button.classList.add('button-active');
+        
+        // Create ripple effect in center of button
+        const ripple = document.createElement('div');
+        ripple.className = 'ripple';
+        ripple.style.left = '50%';
+        ripple.style.top = '50%';
+        
+        button.appendChild(ripple);
+        
         setTimeout(() => {
-            button.classList.remove('button-clicked');
+            button.classList.remove('button-active');
+            if (button.contains(ripple)) {
+                button.removeChild(ripple);
+            }
         }, 200);
     }
 }

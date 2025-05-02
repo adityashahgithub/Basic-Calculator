@@ -61,6 +61,161 @@ body {
     background: var(--primary-dark);
     color: var(--text-light);
     transition: background-color var(--transition-speed);
+    position: relative;
+    overflow: hidden;
+}
+
+body::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(
+        45deg,
+        var(--accent-blue) 0%,
+        transparent 20%,
+        var(--accent-purple) 40%,
+        transparent 60%,
+        var(--accent-pink) 80%,
+        transparent 100%
+    );
+    opacity: 0.08;
+    z-index: -3;
+    animation: gradient-rotate 15s linear infinite;
+    pointer-events: none;
+}
+
+@keyframes gradient-rotate {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* Add subtle particles floating in background */
+.particle {
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    background: var(--accent-blue);
+    border-radius: 50%;
+    opacity: 0.2;
+    pointer-events: none;
+    z-index: -2;
+}
+
+.particle:nth-child(3n) {
+    background: var(--accent-purple);
+}
+
+.particle:nth-child(3n+1) {
+    background: var(--accent-pink);
+}
+
+@keyframes float-particle {
+    0% {
+        transform: translateY(0) translateX(0);
+        opacity: 0;
+    }
+    50% {
+        opacity: 0.5;
+    }
+    100% {
+        transform: translateY(-100vh) translateX(20px);
+        opacity: 0;
+    }
+}
+
+/* Theme transition effect */
+.calculator.theme-transition {
+    animation: theme-change 0.5s ease-in-out;
+}
+
+@keyframes theme-change {
+    0% {
+        transform: scale(0.98) rotate(-1deg);
+        filter: blur(2px);
+    }
+    50% {
+        transform: scale(1.02) rotate(1deg);
+    }
+    100% {
+        transform: scale(1) rotate(0);
+        filter: blur(0);
+    }
+}
+
+/* Add 3D hover effect to calculator */
+.calculator {
+    transition: transform 0.3s ease, box-shadow 0.3s ease, filter 0.3s ease;
+    transform-style: preserve-3d;
+    perspective: 1000px;
+}
+
+.calculator:hover {
+    transform: translateY(-10px) scale(1.02) rotateX(5deg);
+    box-shadow: 
+        var(--calculator-shadow),
+        0 0 20px var(--accent-blue),
+        0 0 40px rgba(0, 217, 255, 0.2);
+    filter: brightness(1.1);
+}
+
+/* Add shine effect to display */
+.display::after {
+    content: '';
+    position: absolute;
+    top: -100%;
+    left: -100%;
+    width: 50%;
+    height: 300%;
+    background: linear-gradient(
+        to right,
+        rgba(255, 255, 255, 0),
+        rgba(255, 255, 255, 0.1),
+        rgba(255, 255, 255, 0)
+    );
+    transform: rotate(30deg);
+    animation: display-shine 8s ease-in-out infinite;
+    pointer-events: none;
+}
+
+@keyframes display-shine {
+    0%, 100% {
+        top: -100%;
+        left: -100%;
+    }
+    30%, 70% {
+        top: -50%;
+        left: 100%;
+    }
+}
+
+/* Add button press animation */
+.button-active {
+    transform: scale(0.92) !important;
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.3) !important;
+    filter: brightness(0.9) !important;
+    transition: all 0.1s !important;
+}
+
+/* Enhance hover and click effects */
+button {
+    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), 
+                background-color 0.2s, 
+                box-shadow 0.2s,
+                filter 0.2s !important;
+    position: relative;
+    overflow: hidden;
+}
+
+button:hover {
+    filter: brightness(1.1);
+    z-index: 2;
 }
 
 /* Universe Background */
@@ -189,7 +344,7 @@ body {
     overflow: hidden;
     transition: all var(--transition-speed);
     transform-style: preserve-3d;
-    animation: calculator-appear 1s forwards;
+    animation: calculator-appear 1s forwards, calculator-float 6s ease-in-out infinite;
 }
 
 @keyframes calculator-appear {
@@ -203,8 +358,19 @@ body {
     }
 }
 
+/* New floating animation for calculator */
+@keyframes calculator-float {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-10px);
+    }
+}
+
 .calculator:hover {
-    box-shadow: var(--calculator-shadow), var(--glow-blue);
+    box-shadow: var(--calculator-shadow), var(--glow-blue), var(--glow-purple), var(--glow-pink);
+    transform: scale(1.02);
 }
 
 /* Calculator Header */
@@ -317,19 +483,20 @@ body {
     content: '';
     position: absolute;
     top: 0;
-    left: 0;
-    width: 100%;
-    height: 2px;
-    background: linear-gradient(to right, var(--accent-blue), var(--accent-purple), var(--accent-pink));
-    animation: scan-line 2s linear infinite;
+    left: -100%;
+    width: 50%;
+    height: 100%;
+    background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.1), transparent);
+    animation: scan-line 3s linear infinite;
+    pointer-events: none;
 }
 
 @keyframes scan-line {
     0% {
-        transform: translateY(-100%);
+        left: -100%;
     }
     100% {
-        transform: translateY(4500%);
+        left: 200%;
     }
 }
 
@@ -387,9 +554,10 @@ button i {
 }
 
 .btn-number:hover {
-    background-color: rgba(50, 55, 65, 0.9);
+    background: linear-gradient(145deg, var(--accent-blue), var(--accent-purple));
+    color: white;
     transform: translateY(-3px);
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 5px 15px rgba(157, 78, 221, 0.4);
 }
 
 .btn-operator {
@@ -400,9 +568,10 @@ button i {
 }
 
 .btn-operator:hover {
-    background-color: rgba(0, 194, 255, 0.9);
+    background: linear-gradient(145deg, var(--accent-purple), var(--accent-pink));
+    color: white;
     transform: translateY(-3px);
-    box-shadow: 0 5px 15px rgba(0, 174, 255, 0.4);
+    box-shadow: 0 5px 15px rgba(255, 0, 160, 0.4);
 }
 
 /* Special button styles */
@@ -414,9 +583,10 @@ button i {
 }
 
 .btn-special:hover {
-    background-color: rgba(177, 98, 241, 0.9);
+    background: linear-gradient(145deg, var(--accent-pink), var(--accent-blue));
+    color: white;
     transform: translateY(-3px);
-    box-shadow: 0 5px 15px rgba(157, 78, 221, 0.4);
+    box-shadow: 0 5px 15px rgba(0, 217, 255, 0.4);
 }
 
 /* Memory button styles */
@@ -466,8 +636,8 @@ button[data-number=")"]:hover {
 }
 
 .btn-equal:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 10px 20px rgba(157, 78, 221, 0.5);
+    animation: equal-pulse 1.5s infinite alternate;
+    transform: translateY(-3px) scale(1.05);
 }
 
 @keyframes equalize {
@@ -476,6 +646,15 @@ button[data-number=")"]:hover {
     }
     50% {
         background-position: 100% 50%;
+    }
+}
+
+@keyframes equal-pulse {
+    0% {
+        box-shadow: 0 0 10px var(--accent-blue), 0 0 20px var(--accent-blue);
+    }
+    100% {
+        box-shadow: 0 0 15px var(--accent-purple), 0 0 30px var(--accent-purple);
     }
 }
 
@@ -1174,13 +1353,13 @@ footer:hover {
     background: rgba(255, 255, 255, 0.3);
     border-radius: 50%;
     transform: scale(0);
-    animation: ripple 0.6s linear;
+    animation: ripple-effect 0.6s linear;
     pointer-events: none;
 }
 
-@keyframes ripple {
+@keyframes ripple-effect {
     to {
-        transform: scale(4);
+        transform: scale(2.5);
         opacity: 0;
     }
 }
@@ -1388,5 +1567,184 @@ button:active {
     }
     100% {
         background-position: 0 1000px;
+    }
+}
+
+/* Add typing animation for equation display */
+@keyframes typing-effect {
+    from { width: 0 }
+    to { width: 100% }
+}
+
+.equation.typing {
+    overflow: hidden;
+    white-space: nowrap;
+    border-right: 2px solid var(--accent-blue);
+    animation: typing-effect 1s steps(30, end), 
+               blink-caret 0.75s step-end infinite;
+}
+
+@keyframes blink-caret {
+    from, to { border-color: transparent }
+    50% { border-color: var(--accent-blue) }
+}
+
+/* Add glow effect for display on calculation */
+.display.calculating {
+    animation: calculating-glow 1.5s infinite alternate;
+}
+
+@keyframes calculating-glow {
+    0% {
+        box-shadow: inset 0 0 5px var(--accent-blue);
+    }
+    100% {
+        box-shadow: inset 0 0 15px var(--accent-purple);
+    }
+}
+
+/* Add button press animation */
+.button-active {
+    transform: scale(0.95) !important;
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.3) !important;
+    transition: all 0.1s !important;
+}
+
+/* Add ripple effect for button clicks */
+.ripple {
+    position: absolute;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    transform: scale(0);
+    animation: ripple-effect 0.6s linear;
+    pointer-events: none;
+}
+
+@keyframes ripple-effect {
+    to {
+        transform: scale(2.5);
+        opacity: 0;
+    }
+}
+
+/* Number row animation on page load */
+.btn-number {
+    opacity: 0;
+    animation: fade-in-button 0.5s forwards;
+    animation-delay: calc(var(--btn-delay) * 0.1s);
+}
+
+.btn-number:nth-child(5) { --btn-delay: 1; }
+.btn-number:nth-child(6) { --btn-delay: 2; }
+.btn-number:nth-child(7) { --btn-delay: 3; }
+.btn-number:nth-child(9) { --btn-delay: 4; }
+.btn-number:nth-child(10) { --btn-delay: 5; }
+.btn-number:nth-child(11) { --btn-delay: 6; }
+.btn-number:nth-child(13) { --btn-delay: 7; }
+.btn-number:nth-child(14) { --btn-delay: 8; }
+.btn-number:nth-child(15) { --btn-delay: 9; }
+
+@keyframes fade-in-button {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Brand name animation */
+.brand h1 {
+    position: relative;
+    animation: text-shadow-pulse 3s infinite alternate;
+}
+
+@keyframes text-shadow-pulse {
+    0% {
+        text-shadow: 0 0 5px var(--accent-blue);
+    }
+    50% {
+        text-shadow: 0 0 10px var(--accent-purple);
+    }
+    100% {
+        text-shadow: 0 0 15px var(--accent-pink);
+    }
+}
+
+/* Solar panel enhanced animation */
+.solar-panel {
+    animation: solar-glow 4s infinite alternate;
+}
+
+@keyframes solar-glow {
+    0% {
+        box-shadow: 0 0 5px var(--accent-blue);
+    }
+    100% {
+        box-shadow: 0 0 10px var(--accent-purple);
+    }
+}
+
+/* Universe background enhanced */
+.stars, .twinkling {
+    transition: opacity 1s ease;
+}
+
+body:hover .stars {
+    animation: stars-pulse 10s infinite alternate;
+}
+
+@keyframes stars-pulse {
+    0% {
+        opacity: 0.7;
+    }
+    100% {
+        opacity: 1;
+    }
+}
+
+/* Theme toggle animation */
+.label .ball {
+    transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55), background-color 0.4s;
+}
+
+.checkbox:checked + .label .ball {
+    transform: translateX(24px);
+    animation: ball-pulse 0.5s ease-out;
+}
+
+@keyframes ball-pulse {
+    0%, 100% {
+        transform: translateX(24px) scale(1);
+    }
+    50% {
+        transform: translateX(24px) scale(1.2);
+    }
+}
+
+/* Add memory indicator animation */
+.memory-indicator {
+    position: absolute;
+    top: 5px;
+    right: 10px;
+    font-size: 10px;
+    color: var(--accent-pink);
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.memory-indicator.active {
+    opacity: 1;
+    animation: memory-pulse 2s infinite;
+}
+
+@keyframes memory-pulse {
+    0%, 100% {
+        opacity: 0.5;
+    }
+    50% {
+        opacity: 1;
     }
 } 
