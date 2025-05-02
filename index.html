@@ -3,54 +3,112 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Basic Calculator - Unified Mentor</title>
+    <title>Futuristic Calculator - Unified Mentor</title>
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Orbitron:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="calculator-container">
-        <h1>Basic Calculator</h1>
-        <div class="calculator">
-            <div class="equation" id="equation"></div>
-            <div class="display" id="display">0</div>
-            <div class="buttons">
-                <button onclick="handleClear()" class="btn-special">C</button>
-                <button onclick="handleOperator('/')" class="btn-operator">/</button>
-                <button onclick="handleOperator('*')" class="btn-operator">×</button>
-                <button onclick="handleOperator('-')" class="btn-operator">−</button>
+    <div class="universe">
+        <div class="stars"></div>
+        <div class="twinkling"></div>
+        
+        <div class="calculator-container">
+            <div class="theme-toggle">
+                <input type="checkbox" class="checkbox" id="theme-toggle">
+                <label for="theme-toggle" class="label">
+                    <i class="fas fa-moon"></i>
+                    <i class="fas fa-sun"></i>
+                    <div class="ball"></div>
+                </label>
+            </div>
+            
+            <div class="calculator">
+                <div class="calculator-header">
+                    <div class="brand">
+                        <i class="fas fa-rocket rocket-icon"></i>
+                        <h1>QUANTUM<span>CALC</span></h1>
+                    </div>
+                    <div class="solar-panel">
+                        <div class="solar-cell"></div>
+                        <div class="solar-cell"></div>
+                        <div class="solar-cell"></div>
+                        <div class="solar-cell"></div>
+                    </div>
+                </div>
                 
-                <button onclick="handleNumber('7')">7</button>
-                <button onclick="handleNumber('8')">8</button>
-                <button onclick="handleNumber('9')">9</button>
-                <button onclick="handleOperator('+')" class="btn-operator">+</button>
+                <div class="display-container">
+                    <div class="equation" id="equation"></div>
+                    <div class="display" id="display">0</div>
+                </div>
                 
-                <button onclick="handleNumber('4')">4</button>
-                <button onclick="handleNumber('5')">5</button>
-                <button onclick="handleNumber('6')">6</button>
-                <button onclick="handleNumber('(')" class="btn-special">(</button>
+                <div class="buttons">
+                    <button onclick="handleClear()" class="btn-special pulse-animation" data-action="clear">AC</button>
+                    <button onclick="handleFunction('backspace')" class="btn-special" data-action="backspace"><i class="fas fa-backspace"></i></button>
+                    <button onclick="handleFunction('percent')" class="btn-special" data-action="percent">%</button>
+                    <button onclick="handleOperator('/')" class="btn-operator" data-action="divide"><i class="fas fa-divide"></i></button>
+                    
+                    <button onclick="handleNumber('7')" class="btn-number" data-number="7">7</button>
+                    <button onclick="handleNumber('8')" class="btn-number" data-number="8">8</button>
+                    <button onclick="handleNumber('9')" class="btn-number" data-number="9">9</button>
+                    <button onclick="handleOperator('*')" class="btn-operator" data-action="multiply"><i class="fas fa-times"></i></button>
+                    
+                    <button onclick="handleNumber('4')" class="btn-number" data-number="4">4</button>
+                    <button onclick="handleNumber('5')" class="btn-number" data-number="5">5</button>
+                    <button onclick="handleNumber('6')" class="btn-number" data-number="6">6</button>
+                    <button onclick="handleOperator('-')" class="btn-operator" data-action="subtract"><i class="fas fa-minus"></i></button>
+                    
+                    <button onclick="handleNumber('1')" class="btn-number" data-number="1">1</button>
+                    <button onclick="handleNumber('2')" class="btn-number" data-number="2">2</button>
+                    <button onclick="handleNumber('3')" class="btn-number" data-number="3">3</button>
+                    <button onclick="handleOperator('+')" class="btn-operator" data-action="add"><i class="fas fa-plus"></i></button>
+                    
+                    <button onclick="handleNumber('(')" class="btn-number" data-number="(">(</button>
+                    <button onclick="handleNumber('0')" class="btn-number" data-number="0">0</button>
+                    <button onclick="handleNumber(')')" class="btn-number" data-number=")">)</button>
+                    <button onclick="handleNumber('.')" class="btn-number" data-number=".">.</button>
+                    
+                    <button onclick="handleEqual()" class="btn-equal" data-action="calculate">=</button>
+                </div>
                 
-                <button onclick="handleNumber('1')">1</button>
-                <button onclick="handleNumber('2')">2</button>
-                <button onclick="handleNumber('3')">3</button>
-                <button onclick="handleNumber(')')" class="btn-special">)</button>
-                
-                <button onclick="handleNumber('0')" class="zero">0</button>
-                <button onclick="handleNumber('.')">.</button>
-                <button onclick="handleEqual()" class="equal">=</button>
+                <div class="hologram-effect"></div>
+            </div>
+            
+            <div class="calculator-stand">
+                <div class="calculator-base"></div>
+            </div>
+            
+            <div class="help-button" id="help-button">
+                <i class="fas fa-question-circle"></i>
+            </div>
+            
+            <div class="help-modal" id="help-modal">
+                <div class="help-modal-content">
+                    <span class="close-button" id="close-button">&times;</span>
+                    <h2>How to Use QuantumCalc</h2>
+                    <ul>
+                        <li><i class="fas fa-keyboard"></i> Use your keyboard or click the buttons</li>
+                        <li><i class="fas fa-calculator"></i> Supports basic operations: +, -, ×, ÷</li>
+                        <li><i class="fas fa-percentage"></i> Percentage calculations</li>
+                        <li><i class="fas fa-brackets-curly"></i> Parentheses for complex equations</li>
+                        <li><i class="fas fa-sun"></i> Toggle between light and dark themes</li>
+                        <li><i class="fas fa-backspace"></i> Backspace to delete last input</li>
+                    </ul>
+                    <div class="keyboard-shortcuts">
+                        <h3>Keyboard Shortcuts</h3>
+                        <div class="shortcut"><span>Enter</span> = Calculate</div>
+                        <div class="shortcut"><span>Escape</span> = Clear</div>
+                        <div class="shortcut"><span>Backspace</span> = Delete last digit</div>
+                    </div>
+                </div>
             </div>
         </div>
-        <div class="instructions">
-            <h2>Instructions</h2>
-            <ul>
-                <li>Enter numbers using the keypad or your keyboard</li>
-                <li>Use operators (+, -, ×, /) for calculations</li>
-                <li>Press "=" or Enter key to calculate the result</li>
-                <li>Press "C" or Escape key to clear the calculator</li>
-            </ul>
-        </div>
+        
+        <footer>
+            <p>Created for Unified Mentor Project by <span class="highlight">QuantumCalc Team</span></p>
+        </footer>
     </div>
-    <footer>
-        <p>Created for Unified Mentor Project - Basic Calculator</p>
-    </footer>
+    
     <script src="script.js"></script>
 </body>
 </html> 
