@@ -43,70 +43,86 @@
                 </div>
                 
                 <div class="buttons">
+                    <!-- Memory Row -->
+                    <button onclick="handleFunction('memory-clear')" class="btn-memory" data-action="memory-clear">MC</button>
+                    <button onclick="handleFunction('memory-recall')" class="btn-memory" data-action="memory-recall">MR</button>
+                    <button onclick="handleFunction('memory-add')" class="btn-memory" data-action="memory-add">M+</button>
+                    <button onclick="handleFunction('memory-subtract')" class="btn-memory" data-action="memory-subtract">M-</button>
+                    
+                    <!-- Function Row -->
                     <button onclick="handleClear()" class="btn-special pulse-animation" data-action="clear">AC</button>
                     <button onclick="handleFunction('backspace')" class="btn-special" data-action="backspace"><i class="fas fa-backspace"></i></button>
                     <button onclick="handleFunction('percent')" class="btn-special" data-action="percent">%</button>
                     <button onclick="handleOperator('/')" class="btn-operator" data-action="divide"><i class="fas fa-divide"></i></button>
                     
+                    <!-- Number Row 1 -->
                     <button onclick="handleNumber('7')" class="btn-number" data-number="7">7</button>
                     <button onclick="handleNumber('8')" class="btn-number" data-number="8">8</button>
                     <button onclick="handleNumber('9')" class="btn-number" data-number="9">9</button>
                     <button onclick="handleOperator('*')" class="btn-operator" data-action="multiply"><i class="fas fa-times"></i></button>
                     
+                    <!-- Number Row 2 -->
                     <button onclick="handleNumber('4')" class="btn-number" data-number="4">4</button>
                     <button onclick="handleNumber('5')" class="btn-number" data-number="5">5</button>
                     <button onclick="handleNumber('6')" class="btn-number" data-number="6">6</button>
                     <button onclick="handleOperator('-')" class="btn-operator" data-action="subtract"><i class="fas fa-minus"></i></button>
                     
+                    <!-- Number Row 3 -->
                     <button onclick="handleNumber('1')" class="btn-number" data-number="1">1</button>
                     <button onclick="handleNumber('2')" class="btn-number" data-number="2">2</button>
                     <button onclick="handleNumber('3')" class="btn-number" data-number="3">3</button>
                     <button onclick="handleOperator('+')" class="btn-operator" data-action="add"><i class="fas fa-plus"></i></button>
                     
-                    <button onclick="handleNumber('(')" class="btn-number" data-number="(">(</button>
+                    <!-- Number Row 4 -->
+                    <button onclick="handleFunction('sqrt')" class="btn-special" data-action="sqrt"><i class="fas fa-square-root-alt"></i></button>
                     <button onclick="handleNumber('0')" class="btn-number" data-number="0">0</button>
-                    <button onclick="handleNumber(')')" class="btn-number" data-number=")">)</button>
                     <button onclick="handleNumber('.')" class="btn-number" data-number=".">.</button>
+                    <button onclick="handleNumber('(')" class="btn-number" data-number="(">(</button>
                     
+                    <!-- Number Row 5 -->
+                    <button onclick="handleNumber(')')" class="btn-number" data-number=")">)</button>
+                    
+                    <!-- Equal Row -->
                     <button onclick="handleEqual()" class="btn-equal" data-action="calculate">=</button>
                 </div>
-                
-                <div class="hologram-effect"></div>
-            </div>
-            
-            <div class="calculator-stand">
-                <div class="calculator-base"></div>
             </div>
             
             <div class="help-button" id="help-button">
                 <i class="fas fa-question-circle"></i>
-            </div>
-            
-            <div class="help-modal" id="help-modal">
-                <div class="help-modal-content">
-                    <span class="close-button" id="close-button">&times;</span>
-                    <h2>How to Use QuantumCalc</h2>
-                    <ul>
-                        <li><i class="fas fa-keyboard"></i> Use your keyboard or click the buttons</li>
-                        <li><i class="fas fa-calculator"></i> Supports basic operations: +, -, ×, ÷</li>
-                        <li><i class="fas fa-percentage"></i> Percentage calculations</li>
-                        <li><i class="fas fa-brackets-curly"></i> Parentheses for complex equations</li>
-                        <li><i class="fas fa-sun"></i> Toggle between light and dark themes</li>
-                        <li><i class="fas fa-backspace"></i> Backspace to delete last input</li>
-                    </ul>
-                    <div class="keyboard-shortcuts">
-                        <h3>Keyboard Shortcuts</h3>
-                        <div class="shortcut"><span>Enter</span> = Calculate</div>
-                        <div class="shortcut"><span>Escape</span> = Clear</div>
-                        <div class="shortcut"><span>Backspace</span> = Delete last digit</div>
-                    </div>
-                </div>
             </div>
         </div>
         
         <footer>
             <p>Created for Unified Mentor Project by <span class="highlight">QuantumCalc Team</span></p>
         </footer>
+        
+        <div class="help-modal" id="help-modal">
+            <div class="help-modal-content">
+                <span class="close-button" id="close-button">&times;</span>
+                <h2>How to Use QuantumCalc</h2>
+                <ul>
+                    <li><i class="fas fa-keyboard"></i> Use your keyboard or click the buttons</li>
+                    <li><i class="fas fa-calculator"></i> Supports basic operations: +, -, ×, ÷</li>
+                    <li><i class="fas fa-percentage"></i> Percentage calculations</li>
+                    <li><i class="fas fa-brackets-curly"></i> Parentheses for complex equations</li>
+                    <li><i class="fas fa-square-root-alt"></i> Square root function</li>
+                    <li><i class="fas fa-memory"></i> Memory functions (MC, MR, M+, M-)</li>
+                    <li><i class="fas fa-sun"></i> Toggle between light and dark themes</li>
+                    <li><i class="fas fa-backspace"></i> Backspace to delete last input</li>
+                </ul>
+                <div class="keyboard-shortcuts">
+                    <h3>Keyboard Shortcuts</h3>
+                    <div class="shortcut"><span>Enter</span> = Calculate</div>
+                    <div class="shortcut"><span>Escape</span> = Clear</div>
+                    <div class="shortcut"><span>Backspace</span> = Delete last digit</div>
+                    <div class="shortcut"><span>R</span> = Square root</div>
+                    <div class="shortcut"><span>M</span> = Memory recall</div>
+                    <div class="shortcut"><span>Ctrl+M</span> = Memory clear</div>
+                    <div class="shortcut"><span>Shift+Plus</span> = Memory add</div>
+                    <div class="shortcut"><span>Shift+Minus</span> = Memory subtract</div>
+                </div>
+            </div>
+        </div>
     </div>
     
     <script src="script.js"></script>

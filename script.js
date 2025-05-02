@@ -5,6 +5,7 @@ let calculationOperator = '';
 let shouldResetScreen = false;
 let fullExpression = '';
 let parenthesesCount = 0;
+let memoryValue = 0; // Initialize memory value
 
 // DOM Elements
 const displayElement = document.getElementById('display');
@@ -58,6 +59,34 @@ function initCalculator() {
 
     // Welcome animation
     playWelcomeAnimation();
+
+    // Add quantum effects
+    createQuantumBits();
+
+    // Add button animation effect
+    buttons.forEach(button => {
+        button.addEventListener('click', (e) => {
+            const rect = button.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            const ripple = document.createElement('div');
+            ripple.className = 'ripple';
+            ripple.style.left = `${x}px`;
+            ripple.style.top = `${y}px`;
+            
+            button.appendChild(ripple);
+            
+            setTimeout(() => {
+                button.removeChild(ripple);
+            }, 600);
+            
+            button.classList.add('button-clicked');
+            setTimeout(() => {
+                button.classList.remove('button-clicked');
+            }, 200);
+        });
+    });
 }
 
 /**
@@ -112,6 +141,9 @@ function updateDisplay() {
  * @param {string} number - The number or character pressed
  */
 function handleNumber(number) {
+    // Log current state for debugging
+    console.log("Before handleNumber - currentInput:", currentInput, "previousInput:", previousInput);
+    
     // Special handling for parentheses
     if (number === '(' || number === ')') {
         handleParentheses(number);
@@ -133,6 +165,10 @@ function handleNumber(number) {
             currentInput += number;
         }
     }
+    
+    // Log after state for debugging
+    console.log("After handleNumber - currentInput:", currentInput, "previousInput:", previousInput);
+    
     updateDisplay();
 }
 
@@ -150,17 +186,46 @@ function handleParentheses(parenthesis) {
         parenthesesCount++;
         
         if (shouldResetScreen) {
-            previousInput += ' (';
+            previousInput += '(';
         } else {
-            previousInput += currentInput + ' (';
+            previousInput += currentInput + '(';
             currentInput = '0';
         }
     } else if (parenthesis === ')') {
         // Only add closing parenthesis if there are open parentheses
         if (parenthesesCount > 0) {
             parenthesesCount--;
-            previousInput += currentInput + ' )';
-            calculateExpression();
+            
+            // Only add the current input if it's not already part of the expression
+            // or if it's not the default value (0)
+            if (currentInput !== '0' || previousInput.endsWith('(')) {
+                previousInput += currentInput;
+            }
+            
+            previousInput += ')';
+            
+            // Try to immediately evaluate the expression to provide visual feedback
+            try {
+                // Create a temporary copy of the expression to evaluate
+                const tempExpression = previousInput;
+                
+                // Use a simplified evaluation to check if the expression is valid
+                // but don't update the calculator state yet
+                let validResult = evaluatePartialExpression(tempExpression);
+                
+                // Display the intermediate result but keep the expression in previousInput
+                if (validResult !== null) {
+                    currentInput = validResult;
+                } else {
+                    // If evaluation fails, just set to 0 (will be fixed when equals is pressed)
+                    currentInput = '0';
+                }
+            } catch (e) {
+                // If there's an error just continue with the default behavior
+                currentInput = '0';
+            }
+            
+            shouldResetScreen = true;
         }
     }
     
@@ -168,10 +233,78 @@ function handleParentheses(parenthesis) {
 }
 
 /**
- * Handles special functions like backspace and percent
+ * Evaluates a partial expression to provide immediate feedback
+ * @param {string} expression - The expression to evaluate
+ * @returns {string|null} - The result as string or null if invalid
+ */
+function evaluatePartialExpression(expression) {
+    try {
+        // Similar to calculateExpression but simplified and doesn't update state
+        // Apply same replacements for consistency
+        expression = expression.replace(/\)\(/g, ')*(');
+        expression = expression.replace(/(\d)(\()/g, '$1*$2');
+        expression = expression.replace(/([+\-*/])(\d+)(\()/g, '$1$2*$3');
+        
+        // Convert to pure math expression
+        let pureExpression = '';
+        let numBuffer = '';
+        let lastChar = '';
+        
+        for (let i = 0; i < expression.length; i++) {
+            const char = expression.charAt(i);
+            
+            // Skip duplicate operators
+            if ((char === '+' || char === '-' || char === '*' || char === '/') && 
+                (lastChar === '+' || lastChar === '-' || lastChar === '*' || lastChar === '/')) {
+                continue;
+            }
+            
+            // Handle numbers
+            if (/[0-9.]/.test(char)) {
+                numBuffer += char;
+            } else {
+                if (numBuffer !== '') {
+                    pureExpression += parseFloat(numBuffer);
+                    numBuffer = '';
+                }
+                
+                // Add implicit multiplication
+                if (char === '(' && lastChar !== '' && /[0-9)]/.test(lastChar)) {
+                    pureExpression += '*';
+                }
+                
+                pureExpression += char;
+            }
+            
+            lastChar = char;
+        }
+        
+        // Add any remaining number
+        if (numBuffer !== '') {
+            pureExpression += parseFloat(numBuffer);
+        }
+        
+        // Evaluate the expression
+        const result = Function('"use strict"; return (' + pureExpression + ')')();
+        
+        if (!isFinite(result)) {
+            return null;
+        }
+        
+        // Return formatted result
+        return Math.round(result * 100000) / 100000 + '';
+    } catch (e) {
+        return null;
+    }
+}
+
+/**
+ * Handles special functions like backspace, percent, sqrt, and memory operations
  * @param {string} functionName - The function to execute
  */
 function handleFunction(functionName) {
+    console.log("Function called:", functionName);
+    
     switch (functionName) {
         case 'backspace':
             if (currentInput.length > 1) {
@@ -185,8 +318,75 @@ function handleFunction(functionName) {
                 currentInput = (parseFloat(currentInput) / 100).toString();
             }
             break;
+        case 'sqrt':
+            if (currentInput !== '0') {
+                const num = parseFloat(currentInput);
+                if (num < 0) {
+                    currentInput = 'Error';
+                } else {
+                    currentInput = Math.sqrt(num).toString();
+                }
+            }
+            break;
+        case 'memory-clear':
+            // Just reset memory to zero
+            memoryValue = 0;
+            displayMemoryIndicator();
+            break;
+        case 'memory-recall':
+            // Replace current input with memory value
+            currentInput = memoryValue.toString();
+            shouldResetScreen = true;
+            break;
+        case 'memory-add':
+            // First make sure we have a valid current input
+            let addValue = parseFloat(currentInput);
+            if (!isNaN(addValue)) {
+                // Add to memory without changing display
+                memoryValue += addValue;
+                console.log("Memory after M+:", memoryValue);
+                displayMemoryIndicator();
+                shouldResetScreen = true;
+            }
+            break;
+        case 'memory-subtract':
+            // First make sure we have a valid current input
+            let subtractValue = parseFloat(currentInput);
+            if (!isNaN(subtractValue)) {
+                // Subtract from memory without changing display
+                memoryValue -= subtractValue;
+                console.log("Memory after M-:", memoryValue);
+                displayMemoryIndicator();
+                shouldResetScreen = true;
+            }
+            break;
     }
     updateDisplay();
+}
+
+/**
+ * Displays a memory indicator when memory is being used
+ */
+function displayMemoryIndicator() {
+    // Create or update memory indicator
+    let memoryIndicator = document.getElementById('memory-indicator');
+    
+    if (!memoryIndicator) {
+        memoryIndicator = document.createElement('div');
+        memoryIndicator.id = 'memory-indicator';
+        memoryIndicator.className = 'memory-indicator';
+        memoryIndicator.textContent = 'M';
+        document.querySelector('.display-container').appendChild(memoryIndicator);
+    }
+    
+    // Show or hide based on memory value
+    if (memoryValue !== 0) {
+        memoryIndicator.style.display = 'block';
+        console.log("Memory indicator shown. Current memory value:", memoryValue);
+    } else {
+        memoryIndicator.style.display = 'none';
+        console.log("Memory indicator hidden. Memory is empty.");
+    }
 }
 
 /**
@@ -194,100 +394,137 @@ function handleFunction(functionName) {
  * @param {string} operator - The operator pressed
  */
 function handleOperator(operator) {
+    // Log current state for debugging
+    console.log("Before handleOperator - currentInput:", currentInput, "previousInput:", previousInput);
+    
     // If current display shows error, clear it first
     if (currentInput === 'Error: Division by zero' || currentInput === 'Error') {
         handleClear();
         return;
     }
     
-    // If there's a previous operation waiting, calculate it first
-    if (calculationOperator !== '') {
-        calculateSimpleOperation();
-    }
-    
-    // Add operator to previous input
+    // Add operator to previous input without calculating immediately
     if (previousInput === '') {
-        previousInput = currentInput + ' ' + operator;
+        previousInput = currentInput + operator;
     } else {
-        previousInput += ' ' + currentInput + ' ' + operator;
+        previousInput += currentInput + operator;
     }
     
     calculationOperator = operator;
     shouldResetScreen = true;
+    
+    // Log after state for debugging
+    console.log("After handleOperator - currentInput:", currentInput, "previousInput:", previousInput);
+    
     updateDisplay();
 }
 
 /**
- * Calculates a simple operation between two numbers
- * Used when chaining operations (e.g., 1+2+3 should calculate 1+2 first)
- */
-function calculateSimpleOperation() {
-    if (calculationOperator === '') return;
-    
-    const prevValue = parseFloat(previousInput.split(' ')[0]);
-    const currValue = parseFloat(currentInput);
-    
-    let result;
-    
-    switch (calculationOperator) {
-        case '+':
-            result = prevValue + currValue;
-            break;
-        case '-':
-            result = prevValue - currValue;
-            break;
-        case '*':
-            result = prevValue * currValue;
-            break;
-        case '/':
-            if (currValue === 0) {
-                currentInput = 'Error: Division by zero';
-                previousInput = '';
-                calculationOperator = '';
-                updateDisplay();
-                return;
-            }
-            result = prevValue / currValue;
-            break;
-    }
-    
-    // Format result to avoid extremely long decimals
-    previousInput = Math.round(result * 100000) / 100000 + '';
-    calculationOperator = '';
-}
-
-/**
  * Calculates the result of a mathematical expression with proper order of operations
- * Uses a simplified approach that handles basic arithmetic
  */
 function calculateExpression() {
     try {
         // Construct the full expression
-        let expression = previousInput + ' ' + currentInput;
+        let expression = previousInput;
         
         // Remove equals sign if present
-        expression = expression.replace('=', '');
+        expression = expression.replace(/=/g, '');
         
-        // Basic validation
-        if (!/^[0-9+\-*/().\s]+$/.test(expression)) {
-            throw new Error("Invalid expression");
+        console.log("Raw expression:", expression);
+        
+        // Fix parentheses issues - ensure proper pairing
+        let openParenCount = (expression.match(/\(/g) || []).length;
+        let closeParenCount = (expression.match(/\)/g) || []).length;
+        
+        // Add missing closing parentheses if needed
+        while (openParenCount > closeParenCount) {
+            expression += ")";
+            closeParenCount++;
         }
         
-        // Process the expression safely
-        let result = evaluateExpression(expression);
+        // Replace any invalid combination like ")(" with ")*("
+        expression = expression.replace(/\)\(/g, ')*(');
         
-        // Handle division by zero
+        // Handle implicit multiplication like "3(4+2)" by inserting * before (
+        expression = expression.replace(/(\d)(\()/g, '$1*$2');
+        
+        // Also handle cases where there's an operator followed by a number and parenthesis
+        // Like 2+3(12/6) -> 2+3*(12/6)
+        expression = expression.replace(/([+\-*/])(\d+)(\()/g, '$1$2*$3');
+        
+        // Convert the expression to pure math (no string concatenation)
+        // This is done by explicitly converting each number to a float
+        let pureExpression = '';
+        let numBuffer = '';
+        let lastChar = '';
+        
+        for (let i = 0; i < expression.length; i++) {
+            const char = expression.charAt(i);
+            
+            // Skip duplicate operators
+            if ((char === '+' || char === '-' || char === '*' || char === '/') && 
+                (lastChar === '+' || lastChar === '-' || lastChar === '*' || lastChar === '/')) {
+                continue;
+            }
+            
+            // Handle numbers
+            if (/[0-9.]/.test(char)) {
+                // If digit or decimal, add to number buffer
+                numBuffer += char;
+            } else {
+                // If operator or parenthesis
+                if (numBuffer !== '') {
+                    // Add number to formatted expression
+                    pureExpression += parseFloat(numBuffer);
+                    numBuffer = '';
+                }
+                
+                // Add implicit multiplication between number and opening parenthesis
+                if (char === '(' && lastChar !== '' && /[0-9)]/.test(lastChar)) {
+                    pureExpression += '*';
+                }
+                
+                // Add the operator or parenthesis
+                pureExpression += char;
+            }
+            
+            lastChar = char;
+        }
+        
+        // Add any remaining number
+        if (numBuffer !== '') {
+            pureExpression += parseFloat(numBuffer);
+        }
+        
+        console.log("Pure math expression:", pureExpression);
+        
+        // Verify the expression is valid
+        if (!/^[0-9+\-*/().]+$/.test(pureExpression)) {
+            throw new Error("Invalid characters in expression");
+        }
+        
+        // Calculate the result safely
+        const result = safeEval(pureExpression);
+        console.log("Calculated result:", result);
+        
+        // Ensure the result is a valid number
         if (!isFinite(result)) {
-            currentInput = 'Error: Division by zero';
-            previousInput = '';
-        } else {
-            // Format result to avoid extremely long decimals
-            currentInput = Math.round(result * 100000) / 100000 + '';
-            previousInput = '';
+            throw new Error("Division by zero or other arithmetic error");
         }
+        
+        // Format result to avoid extremely long decimals
+        currentInput = Math.round(result * 100000) / 100000 + '';
+        previousInput = '';
+        
+        // Trigger calculation success animation
+        animateCalculationSuccess();
+        
+        console.log("Final result set to:", currentInput);
     } catch (error) {
+        console.error("Calculation error:", error);
         currentInput = 'Error';
         previousInput = '';
+        animateCalculationError();
     }
     
     calculationOperator = '';
@@ -297,47 +534,132 @@ function calculateExpression() {
 }
 
 /**
- * Evaluates a mathematical expression safely
+ * Safely evaluates a mathematical expression
  * @param {string} expression - The expression to evaluate
- * @returns {number} - The result of the evaluation
+ * @returns {number} - The calculated result
  */
-function evaluateExpression(expression) {
-    // Clean up the expression - remove all spaces
-    expression = expression.replace(/\s+/g, '');
-    
-    // Replace string representation with actual mathematical operations
-    // This ensures our evaluation handles numbers, not strings (avoids '1'+'1'='11' issue)
-    let processedExpression = expression.replace(/(\d+\.?\d*|\.\d+)([+\-*/])(\d+\.?\d*|\.\d+)/g, (match, p1, operator, p2) => {
-        const num1 = parseFloat(p1);
-        const num2 = parseFloat(p2);
-        
-        switch (operator) {
-            case '+':
-                return num1 + num2;
-            case '-':
-                return num1 - num2;
-            case '*':
-                return num1 * num2;
-            case '/':
-                if (num2 === 0) {
-                    throw new Error("Division by zero");
-                }
-                return num1 / num2;
-        }
-    });
-    
-    // Use Function constructor to evaluate the expression safely
-    // Note: This is still using eval under the hood, but with some added safety checks
+function safeEval(expression) {
     try {
-        // Check for division by zero
-        if (expression.includes('/0')) {
-            throw new Error("Division by zero");
-        }
-        
         // Use Function instead of eval for slightly better security
         return Function('"use strict"; return (' + expression + ')')();
     } catch (error) {
-        throw new Error("Calculation error");
+        console.error("Evaluation error:", error);
+        throw new Error("Invalid expression");
+    }
+}
+
+/**
+ * Animates the display on successful calculation
+ */
+function animateCalculationSuccess() {
+    // Add success animation class
+    displayElement.classList.add('calculation-success');
+    
+    // Create particle burst effect
+    createParticleBurst();
+    
+    // Remove animation class after it completes
+    setTimeout(() => {
+        displayElement.classList.remove('calculation-success');
+    }, 1000);
+}
+
+/**
+ * Animates the display on calculation error
+ */
+function animateCalculationError() {
+    // Add error animation class
+    displayElement.classList.add('calculation-error');
+    
+    // Create error particles
+    createErrorParticles();
+    
+    // Remove animation class after it completes
+    setTimeout(() => {
+        displayElement.classList.remove('calculation-error');
+    }, 1000);
+}
+
+/**
+ * Creates a particle burst effect on successful calculation
+ */
+function createParticleBurst() {
+    const container = document.querySelector('.calculator');
+    const display = document.querySelector('.display');
+    const rect = display.getBoundingClientRect();
+    const containerRect = container.getBoundingClientRect();
+    
+    // Calculate relative position
+    const centerX = rect.left - containerRect.left + rect.width / 2;
+    const centerY = rect.top - containerRect.top + rect.height / 2;
+    
+    // Create particles
+    for (let i = 0; i < 20; i++) {
+        const particle = document.createElement('div');
+        particle.className = 'success-particle';
+        
+        // Random position offset
+        const angle = Math.random() * Math.PI * 2;
+        const distance = 20 + Math.random() * 80;
+        const x = centerX + Math.cos(angle) * distance;
+        const y = centerY + Math.sin(angle) * distance;
+        
+        // Random size
+        const size = 3 + Math.random() * 5;
+        
+        // Set styles
+        particle.style.width = `${size}px`;
+        particle.style.height = `${size}px`;
+        particle.style.left = `${x}px`;
+        particle.style.top = `${y}px`;
+        particle.style.setProperty('--angle', `${angle}rad`);
+        particle.style.setProperty('--delay', `${Math.random() * 0.2}s`);
+        particle.style.setProperty('--duration', `${0.5 + Math.random()}s`);
+        
+        container.appendChild(particle);
+        
+        // Remove particle after animation
+        setTimeout(() => {
+            container.removeChild(particle);
+        }, 1500);
+    }
+}
+
+/**
+ * Creates error particles on calculation error
+ */
+function createErrorParticles() {
+    const container = document.querySelector('.calculator');
+    const display = document.querySelector('.display');
+    const rect = display.getBoundingClientRect();
+    const containerRect = container.getBoundingClientRect();
+    
+    // Calculate relative position
+    const left = rect.left - containerRect.left;
+    const top = rect.top - containerRect.top;
+    const width = rect.width;
+    const height = rect.height;
+    
+    // Create particles
+    for (let i = 0; i < 15; i++) {
+        const particle = document.createElement('div');
+        particle.className = 'error-particle';
+        
+        // Random position
+        const x = left + Math.random() * width;
+        const y = top + Math.random() * height;
+        
+        // Set styles
+        particle.style.left = `${x}px`;
+        particle.style.top = `${y}px`;
+        particle.style.setProperty('--delay', `${Math.random() * 0.5}s`);
+        
+        container.appendChild(particle);
+        
+        // Remove particle after animation
+        setTimeout(() => {
+            container.removeChild(particle);
+        }, 2000);
     }
 }
 
@@ -345,58 +667,48 @@ function evaluateExpression(expression) {
  * Handles the equals button click
  */
 function handleEqual() {
+    // Log for debugging
+    console.log("handleEqual called - currentInput:", currentInput, "previousInput:", previousInput);
+    
     // Don't do anything if there's nothing to calculate
-    if (previousInput === '') return;
+    if (previousInput === '') {
+        console.log("Nothing to calculate, returning");
+        return;
+    }
     
     // Add closing parentheses if needed
     while (parenthesesCount > 0) {
-        previousInput += ' ' + currentInput + ' )';
+        previousInput += currentInput + ')';
         parenthesesCount--;
+        console.log("Added closing parenthesis, new previousInput:", previousInput);
     }
     
-    previousInput += ' ' + currentInput + ' =';
+    // Store the final expression with the current input
+    let finalExpression = previousInput;
     
-    // Store the equation for display
-    const equation = previousInput;
-    
-    // For simple calculations like 1+1, use the simple operation method
-    if (!equation.includes('(') && !equation.includes(')') && 
-        (equation.match(/[+\-*/]/g) || []).length === 1) {
-        // Extract operator and operands
-        const parts = equation.split(' ');
-        const num1 = parseFloat(parts[0]);
-        const operator = parts[1];
-        const num2 = parseFloat(parts[2]);
-        
-        let result;
-        
-        switch (operator) {
-            case '+':
-                result = num1 + num2;
-                break;
-            case '-':
-                result = num1 - num2;
-                break;
-            case '*':
-                result = num1 * num2;
-                break;
-            case '/':
-                if (num2 === 0) {
-                    currentInput = 'Error: Division by zero';
-                    previousInput = '';
-                    updateDisplay();
-                    return;
-                }
-                result = num1 / num2;
-                break;
-        }
-        
-        currentInput = Math.round(result * 100000) / 100000 + '';
-        previousInput = '';
-    } else {
-        // For complex expressions, use the full calculation method
-        calculateExpression();
+    // Only add currentInput if it's not already the last number in previousInput
+    // This is important for expressions like "2+3(12/6)" where we need to ensure
+    // the current input (which might be "0" due to how parentheses are processed)
+    // doesn't overwrite the actual last number in the expression
+    if (!previousInput.endsWith(currentInput) && 
+        currentInput !== '0' && 
+        !shouldResetScreen) {
+        finalExpression += currentInput;
     }
+    
+    // Remove trailing operators like +, -, *, / to prevent syntax errors
+    finalExpression = finalExpression.replace(/[+\-*/]$/, '');
+    
+    console.log("Final expression before calculation:", finalExpression);
+    
+    // Display the equation in the history
+    equationElement.textContent = finalExpression + '=';
+    
+    // Calculate the result
+    previousInput = finalExpression;
+    
+    // Use calculateExpression for all calculations to ensure proper order of operations
+    calculateExpression();
     
     // Add pulsing effect to the result
     displayElement.style.animation = 'none';
@@ -423,6 +735,8 @@ function handleClear() {
  * @param {KeyboardEvent} event - The keyboard event
  */
 function handleKeyboardInput(event) {
+    console.log("Key pressed:", event.key);
+    
     // Numbers 0-9
     if (/[0-9]/.test(event.key)) {
         event.preventDefault();
@@ -446,12 +760,12 @@ function handleKeyboardInput(event) {
         handleOperator('-');
         animateButton('[data-action="subtract"]');
     }
-    else if (event.key === '*') {
+    else if (event.key === '*' || event.key === 'x' || event.key === 'X') {
         event.preventDefault();
         handleOperator('*');
         animateButton('[data-action="multiply"]');
     }
-    else if (event.key === '/') {
+    else if (event.key === '/' || event.key === '÷') {
         event.preventDefault();
         handleOperator('/');
         animateButton('[data-action="divide"]');
@@ -491,6 +805,33 @@ function handleKeyboardInput(event) {
         handleFunction('percent');
         animateButton('[data-action="percent"]');
     }
+    // Square root (r key)
+    else if (event.key === 'r' || event.key === 'R') {
+        event.preventDefault();
+        handleFunction('sqrt');
+        animateButton('[data-action="sqrt"]');
+    }
+    // Memory functions
+    else if (event.key === 'm' || event.key === 'M') {
+        event.preventDefault();
+        handleFunction('memory-recall');
+        animateButton('[data-action="memory-recall"]');
+    }
+    else if (event.ctrlKey && (event.key === 'm' || event.key === 'M')) {
+        event.preventDefault();
+        handleFunction('memory-clear');
+        animateButton('[data-action="memory-clear"]');
+    }
+    else if (event.shiftKey && (event.key === '+')) {
+        event.preventDefault();
+        handleFunction('memory-add');
+        animateButton('[data-action="memory-add"]');
+    }
+    else if (event.shiftKey && (event.key === '-')) {
+        event.preventDefault();
+        handleFunction('memory-subtract');
+        animateButton('[data-action="memory-subtract"]');
+    }
 }
 
 /**
@@ -507,76 +848,35 @@ function animateButton(selector) {
     }
 }
 
+/**
+ * Creates quantum bit particles for animation
+ */
+function createQuantumBits() {
+    const calculator = document.querySelector('.calculator');
+    const quantumBits = document.createElement('div');
+    quantumBits.className = 'quantum-bits';
+    
+    // Create 15 quantum bits
+    for (let i = 0; i < 15; i++) {
+        const bit = document.createElement('div');
+        bit.className = 'quantum-bit';
+        
+        // Set random position
+        const left = Math.random() * 100;
+        bit.style.left = `${left}%`;
+        
+        // Set random animation duration and delay
+        const duration = 3 + Math.random() * 4; // 3-7 seconds
+        const delay = Math.random() * 5; // 0-5 seconds
+        
+        bit.style.setProperty('--bit-duration', `${duration}s`);
+        bit.style.setProperty('--bit-delay', `${delay}`);
+        
+        quantumBits.appendChild(bit);
+    }
+    
+    calculator.appendChild(quantumBits);
+}
+
 // Initialize the calculator when DOM is fully loaded
 document.addEventListener('DOMContentLoaded', initCalculator); 
-
-
-
-/**
- * Handles the equals button click
- */
-function handleEqual() {
-    // Don't do anything if there's nothing to calculate
-    if (previousInput === '') return;
-    
-    // Add closing parentheses if needed
-    while (parenthesesCount > 0) {
-        previousInput += ' ' + currentInput + ' )';
-        parenthesesCount--;
-    }
-    
-    previousInput += ' ' + currentInput + ' =';
-    
-    // Store the equation for display
-    const equation = previousInput;
-    
-    // For simple calculations like 1+1, use the simple operation method
-    if (!equation.includes('(') && !equation.includes(')') && 
-        (equation.match(/[+\-*/]/g) || []).length === 1) {
-        // Extract operator and operands
-        const parts = equation.split(' ');
-        const num1 = parseFloat(parts[0]);
-        const operator = parts[1];
-        const num2 = parseFloat(parts[2]);
-        
-        let result;
-        
-        switch (operator) {
-            case '+':
-                result = num1 + num2;
-                break;
-            case '-':
-                result = num1 - num2;
-                break;
-            case '*':
-                result = num1 * num2;
-                break;
-            case '/':
-                if (num2 === 0) {
-                    currentInput = 'Error: Division by zero';
-                    previousInput = '';
-                    updateDisplay();
-                    return;
-                }
-                result = num1 / num2;
-                break;
-        }
-        
-        currentInput = Math.round(result * 100000) / 100000 + '';
-        previousInput = '';
-    } else {
-        // For complex expressions, use the full calculation method
-        calculateExpression();
-    }
-    
-    // Make sure to update the display with the result
-    updateDisplay();
-    
-    // Add pulsing effect to the result
-    displayElement.style.animation = 'none';
-    void displayElement.offsetWidth; // Trigger reflow
-    displayElement.style.animation = 'pulse 1.5s 1';
-    setTimeout(() => {
-        displayElement.style.animation = '';
-    }, 1500);
-} 
