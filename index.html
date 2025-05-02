@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Basic Calculator - Unified Mentor</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="calculator-container">
+        <h1>Basic Calculator</h1>
+        <div class="calculator">
+            <div class="equation" id="equation"></div>
+            <div class="display" id="display">0</div>
+            <div class="buttons">
+                <button onclick="handleClear()" class="btn-special">C</button>
+                <button onclick="handleOperator('/')" class="btn-operator">/</button>
+                <button onclick="handleOperator('*')" class="btn-operator">×</button>
+                <button onclick="handleOperator('-')" class="btn-operator">−</button>
+                
+                <button onclick="handleNumber('7')">7</button>
+                <button onclick="handleNumber('8')">8</button>
+                <button onclick="handleNumber('9')">9</button>
+                <button onclick="handleOperator('+')" class="btn-operator">+</button>
+                
+                <button onclick="handleNumber('4')">4</button>
+                <button onclick="handleNumber('5')">5</button>
+                <button onclick="handleNumber('6')">6</button>
+                <button onclick="handleNumber('(')" class="btn-special">(</button>
+                
+                <button onclick="handleNumber('1')">1</button>
+                <button onclick="handleNumber('2')">2</button>
+                <button onclick="handleNumber('3')">3</button>
+                <button onclick="handleNumber(')')" class="btn-special">)</button>
+                
+                <button onclick="handleNumber('0')" class="zero">0</button>
+                <button onclick="handleNumber('.')">.</button>
+                <button onclick="handleEqual()" class="equal">=</button>
+            </div>
+        </div>
+        <div class="instructions">
+            <h2>Instructions</h2>
+            <ul>
+                <li>Enter numbers using the keypad or your keyboard</li>
+                <li>Use operators (+, -, ×, /) for calculations</li>
+                <li>Press "=" or Enter key to calculate the result</li>
+                <li>Press "C" or Escape key to clear the calculator</li>
+            </ul>
+        </div>
+    </div>
+    <footer>
+        <p>Created for Unified Mentor Project - Basic Calculator</p>
+    </footer>
+    <script src="script.js"></script>
+</body>
+</html> 
