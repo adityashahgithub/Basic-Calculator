@@ -10,6 +10,8 @@ A fully functional calculator built with HTML, CSS, and JavaScript.
 - Responsive design
 - Error handling (division by zero, invalid expressions)
 - Keyboard support
+- Memory functions (MC, MR, M+, M-)
+- Square root calculation
 
 ## How to Use
 
@@ -50,6 +52,8 @@ This calculator follows all the requirements specified in the project:
    - Addition, subtraction, multiplication, and division
    - Support for parentheses for complex calculations
    - Proper order of operations
+   - Memory operations (MC, MR, M+, M-)
+   - Square root function
 
 4. **Input Handling**
    - Accepts both button clicks and keyboard input
@@ -60,4 +64,6 @@ This calculator follows all the requirements specified in the project:
    - Provides clear error messages
    - Prevents invalid operations
 
-## Created for Unified Mentor Project 
+## Created by Aditya Shah
+
+If you have any queries, please reach through email: shahaditya29904@gmail.com 
