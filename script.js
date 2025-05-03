@@ -6,6 +6,8 @@ let shouldResetScreen = false;
 let fullExpression = '';
 let parenthesesCount = 0;
 let memoryValue = 0; // Initialize memory value
+let calculationHistory = []; // Store calculation history
+let isHistoryVisible = false; // Track if history panel is visible
 
 // DOM Elements
 const displayElement = document.getElementById('display');
@@ -20,6 +22,22 @@ const buttons = document.querySelectorAll('button');
  * Initializes the calculator and event listeners
  */
 function initCalculator() {
+    // First ensure DOM elements are properly retrieved
+    if (!displayElement || !equationElement) {
+        console.error("Display elements not found, waiting for DOM...");
+        setTimeout(initCalculator, 100);
+        return;
+    }
+    
+    // Reset calculator state
+    currentInput = '0';
+    previousInput = '';
+    calculationOperator = '';
+    shouldResetScreen = false;
+    fullExpression = '';
+    parenthesesCount = 0;
+    memoryValue = 0;
+    
     // Add button click animation
     buttons.forEach(button => {
         button.addEventListener('click', () => {
@@ -45,6 +63,18 @@ function initCalculator() {
         }, 500);
     });
 
+    // History toggle button
+    const historyToggleBtn = document.getElementById('history-toggle-btn');
+    if (historyToggleBtn) {
+        historyToggleBtn.addEventListener('click', toggleHistory);
+        historyToggleBtn.title = 'Show calculation history (H)';
+        // Add a pulsing animation to draw attention to the history feature
+        historyToggleBtn.classList.add('pulse-once');
+        setTimeout(() => {
+            historyToggleBtn.classList.remove('pulse-once');
+        }, 2000);
+    }
+
     // Help modal functionality
     helpButton.addEventListener('click', () => {
         helpModal.style.display = 'flex';
@@ -62,18 +92,6 @@ function initCalculator() {
 
     // Keyboard event listener
     document.addEventListener('keydown', handleKeyboardInput);
-
-    // Initialize display
-    updateDisplay();
-
-    // Welcome animation
-    playWelcomeAnimation();
-
-    // Add quantum effects
-    createQuantumBits();
-    
-    // Create background particles
-    createBackgroundParticles();
 
     // Add button animation effect
     buttons.forEach(button => {
@@ -94,27 +112,47 @@ function initCalculator() {
                     button.removeChild(ripple);
                 }
             }, 600);
-            
-            button.classList.add('button-clicked');
-            button.classList.add('button-active');
-            setTimeout(() => {
-                button.classList.remove('button-clicked');
-                button.classList.remove('button-active');
-            }, 200);
         });
     });
     
-    // Add memory indicator to the calculator
-    const memoryIndicator = document.createElement('div');
-    memoryIndicator.className = 'memory-indicator';
-    memoryIndicator.id = 'memory-indicator';
-    memoryIndicator.textContent = 'M';
-    document.querySelector('.display-container').appendChild(memoryIndicator);
+    // Check if memory indicator already exists, if not create it
+    const existingIndicator = document.getElementById('memory-indicator');
+    if (!existingIndicator) {
+        const memoryIndicator = document.createElement('div');
+        memoryIndicator.className = 'memory-indicator';
+        memoryIndicator.id = 'memory-indicator';
+        memoryIndicator.textContent = 'M';
+        
+        const displayContainer = document.querySelector('.display-container');
+        if (displayContainer) {
+            displayContainer.appendChild(memoryIndicator);
+            console.log("Memory indicator created");
+        } else {
+            console.error("Display container not found, cannot add memory indicator");
+        }
+    } else {
+        console.log("Memory indicator already exists");
+    }
+    
+    // Initialize memory indicator state
+    displayMemoryIndicator();
+    
+    // Create background particles
+    createBackgroundParticles();
+    
+    // Add quantum effects
+    createQuantumBits();
     
     // Animate buttons sequentially on load
     setTimeout(() => {
         animateButtonsSequentially();
     }, 500);
+    
+    // Initialize display
+    updateDisplay();
+
+    // Welcome animation
+    playWelcomeAnimation();
 }
 
 /**
@@ -219,7 +257,7 @@ function updateDisplay() {
         equationElement.classList.add('typing');
         setTimeout(() => {
             equationElement.classList.remove('typing');
-        }, 1000);
+        }, 500); // Reduced from 1000ms to 500ms for quicker feedback
     }
 }
 
@@ -232,6 +270,16 @@ function formatNumberForDisplay(value) {
     // Handle error messages
     if (typeof value === 'string' && (value === 'Error' || value.startsWith('Error:'))) {
         return value;
+    }
+    
+    // For empty input, show 0
+    if (value === '' || value === null || value === undefined) {
+        return '0';
+    }
+    
+    // Remove any trailing operators before displaying
+    if (/[+\-*/]$/.test(value)) {
+        value = value.slice(0, -1);
     }
     
     // Convert to number and handle NaN
@@ -261,7 +309,7 @@ function formatNumberForDisplay(value) {
         return `${integerPart}.${decimalPart}`;
     }
     
-    // Return formatted number with thousand separators for large integers
+    // For integers, add thousand separators
     if (Number.isInteger(num) && Math.abs(num) >= 1000) {
         return num.toLocaleString('en-US');
     }
@@ -274,17 +322,15 @@ function formatNumberForDisplay(value) {
  * @param {string} number - The number or character pressed
  */
 function handleNumber(number) {
-    // Log current state for debugging
-    console.log("Before handleNumber - currentInput:", currentInput, "previousInput:", previousInput);
-    
     // Special handling for parentheses
     if (number === '(' || number === ')') {
         handleParentheses(number);
         return;
     }
     
+    // If display should be reset (after an operation or calculation)
     if (shouldResetScreen) {
-        currentInput = number;
+        currentInput = number === '.' ? '0.' : number;
         shouldResetScreen = false;
     } else {
         // Replace initial 0 unless decimal point is being added
@@ -295,12 +341,13 @@ function handleNumber(number) {
             if (number === '.' && currentInput.includes('.')) {
                 return;
             }
-            currentInput += number;
+            
+            // Check if adding the number would make the display too long
+            if (currentInput.length < 14) {
+                currentInput += number;
+            }
         }
     }
-    
-    // Log after state for debugging
-    console.log("After handleNumber - currentInput:", currentInput, "previousInput:", previousInput);
     
     updateDisplay();
 }
@@ -372,62 +419,53 @@ function handleParentheses(parenthesis) {
  */
 function evaluatePartialExpression(expression) {
     try {
-        // Similar to calculateExpression but simplified and doesn't update state
-        // Apply same replacements for consistency
-        expression = expression.replace(/\)\(/g, ')*(');
-        expression = expression.replace(/(\d)(\()/g, '$1*$2');
-        expression = expression.replace(/([+\-*/])(\d+)(\()/g, '$1$2*$3');
-        
-        // Convert to pure math expression
-        let pureExpression = '';
-        let numBuffer = '';
-        let lastChar = '';
-        
-        for (let i = 0; i < expression.length; i++) {
-            const char = expression.charAt(i);
-            
-            // Skip duplicate operators
-            if ((char === '+' || char === '-' || char === '*' || char === '/') && 
-                (lastChar === '+' || lastChar === '-' || lastChar === '*' || lastChar === '/')) {
-                continue;
-            }
-            
-            // Handle numbers
-            if (/[0-9.]/.test(char)) {
-                numBuffer += char;
-            } else {
-                if (numBuffer !== '') {
-                    pureExpression += parseFloat(numBuffer);
-                    numBuffer = '';
-                }
-                
-                // Add implicit multiplication
-                if (char === '(' && lastChar !== '' && /[0-9)]/.test(lastChar)) {
-                    pureExpression += '*';
-                }
-                
-                pureExpression += char;
-            }
-            
-            lastChar = char;
-        }
-        
-        // Add any remaining number
-        if (numBuffer !== '') {
-            pureExpression += parseFloat(numBuffer);
-        }
-        
-        // Evaluate the expression
-        const result = Function('"use strict"; return (' + pureExpression + ')')();
-        
-        if (!isFinite(result)) {
+        // Don't evaluate empty expressions
+        if (!expression || expression.trim() === '') {
             return null;
         }
         
-        // Return formatted result
-        return Math.round(result * 100000) / 100000 + '';
+        // Apply same replacements for consistency
+        let parsedExpression = expression;
+        
+        // Handle implicit multiplication
+        parsedExpression = parsedExpression.replace(/\)\(/g, ')*(');
+        parsedExpression = parsedExpression.replace(/(\d)(\()/g, '$1*$2');
+        
+        // Clean up the expression - handle incomplete expressions
+        // If expression ends with an operator, remove it
+        parsedExpression = parsedExpression.replace(/[+\-*/]$/, '');
+        
+        // Ensure balanced parentheses
+        let openCount = (parsedExpression.match(/\(/g) || []).length;
+        let closeCount = (parsedExpression.match(/\)/g) || []).length;
+        
+        // Add missing closing parentheses
+        while (openCount > closeCount) {
+            parsedExpression += ')';
+            closeCount++;
+        }
+        
+        console.log("Evaluating expression:", parsedExpression);
+        
+        // Safe evaluation using function constructor
+        // Ensure we're using proper JavaScript evaluation that respects order of operations
+        const result = Function('"use strict"; return (' + parsedExpression + ')')();
+        
+        console.log("Evaluation result:", result);
+        
+        // Format the result
+        if (!isFinite(result)) {
+            return null; // Division by zero or other error
+        }
+        
+        // Round to avoid floating point precision issues
+        const roundedResult = Math.round(result * 1e12) / 1e12;
+        
+        // Convert to string and return
+        return roundedResult.toString();
     } catch (e) {
-        return null;
+        console.error("Evaluation error:", e);
+        return null; // Any error during evaluation
     }
 }
 
@@ -462,9 +500,23 @@ function handleFunction(functionName) {
             }
             break;
         case 'memory-clear':
-            // Just reset memory to zero
+            // Reset memory to zero
             memoryValue = 0;
-            displayMemoryIndicator();
+            console.log("Memory cleared, new value:", memoryValue);
+            
+            // Get memory indicator element and update its state
+            const mcIndicator = document.getElementById('memory-indicator');
+            if (mcIndicator) {
+                mcIndicator.classList.remove('active');
+                // Force update of animation state
+                mcIndicator.style.animation = 'none';
+                mcIndicator.offsetHeight; // Force reflow
+            } else {
+                console.error("Memory indicator element not found");
+            }
+            
+            // Set shouldResetScreen to true to allow new inputs
+            shouldResetScreen = true;
             break;
         case 'memory-recall':
             // Replace current input with memory value
@@ -499,16 +551,27 @@ function handleFunction(functionName) {
     if (functionName.startsWith('memory')) {
         const memoryIndicator = document.getElementById('memory-indicator');
         
+        if (!memoryIndicator) {
+            console.error("Memory indicator not found");
+            return;
+        }
+        
         if (functionName === 'memory-clear') {
-            memoryIndicator.classList.remove('active');
+            // Already handled in the case statement above
+        } else if (functionName === 'memory-recall') {
+            // No need to update indicator, only using the value
         } else {
-            memoryIndicator.classList.add('active');
-            
-            // Add pulse animation
-            memoryIndicator.style.animation = 'none';
-            setTimeout(() => {
+            // For M+ and M-, ensure the indicator is visible if memory is not zero
+            if (memoryValue !== 0) {
+                memoryIndicator.classList.add('active');
+                
+                // Add pulse animation
+                memoryIndicator.style.animation = 'none';
+                memoryIndicator.offsetHeight; // Force reflow
                 memoryIndicator.style.animation = 'memory-pulse 2s infinite';
-            }, 10);
+            } else {
+                memoryIndicator.classList.remove('active');
+            }
         }
     }
     
@@ -521,10 +584,24 @@ function handleFunction(functionName) {
 function displayMemoryIndicator() {
     const memoryIndicator = document.getElementById('memory-indicator');
     
+    if (!memoryIndicator) {
+        console.error("Memory indicator element not found");
+        return;
+    }
+    
+    console.log("Updating memory indicator, memory value:", memoryValue);
+    
     if (memoryValue !== 0) {
         memoryIndicator.classList.add('active');
+        // Ensure animation is applied
+        if (memoryIndicator.style.animation !== 'memory-pulse 2s infinite') {
+            memoryIndicator.style.animation = 'none';
+            memoryIndicator.offsetHeight; // Force reflow
+            memoryIndicator.style.animation = 'memory-pulse 2s infinite';
+        }
     } else {
         memoryIndicator.classList.remove('active');
+        memoryIndicator.style.animation = 'none';
     }
 }
 
@@ -533,27 +610,38 @@ function displayMemoryIndicator() {
  * @param {string} operator - The operator pressed
  */
 function handleOperator(operator) {
-    // Log current state for debugging
-    console.log("Before handleOperator - currentInput:", currentInput, "previousInput:", previousInput);
-    
     // If current display shows error, clear it first
     if (currentInput === 'Error: Division by zero' || currentInput === 'Error') {
         handleClear();
         return;
     }
     
-    // Add operator to previous input without calculating immediately
-    if (previousInput === '') {
-        previousInput = currentInput + operator;
+    // Don't allow consecutive operators
+    if (shouldResetScreen && previousInput.length > 0) {
+        // Replace the last operator with the new one
+        previousInput = previousInput.replace(/[+\-*/]$/, operator);
     } else {
-        previousInput += currentInput + operator;
+        // Add current input and operator to previous input
+        if (previousInput === '') {
+            previousInput = currentInput + operator;
+        } else {
+            previousInput += currentInput + operator;
+        }
+        
+        // Try to evaluate partial expression to update display with intermediate result
+        try {
+            const tempExpression = previousInput.replace(/[+\-*/]$/, ''); // Remove trailing operator
+            const partialResult = evaluatePartialExpression(tempExpression);
+            if (partialResult !== null) {
+                currentInput = partialResult;
+            }
+        } catch (e) {
+            // If evaluation fails, keep current input as is
+        }
     }
     
     calculationOperator = operator;
     shouldResetScreen = true;
-    
-    // Log after state for debugging
-    console.log("After handleOperator - currentInput:", currentInput, "previousInput:", previousInput);
     
     updateDisplay();
     
@@ -577,6 +665,14 @@ function calculateExpression() {
         
         console.log("Raw expression:", expression);
         
+        // If expression is empty or doesn't have currentInput at the end
+        // We need to add the currentInput to complete it
+        if (!expression.endsWith(currentInput) && 
+            !shouldResetScreen && 
+            currentInput !== '0') {
+            expression += currentInput;
+        }
+        
         // Fix parentheses issues - ensure proper pairing
         let openParenCount = (expression.match(/\(/g) || []).length;
         let closeParenCount = (expression.match(/\)/g) || []).length;
@@ -597,65 +693,23 @@ function calculateExpression() {
         // Like 2+3(12/6) -> 2+3*(12/6)
         expression = expression.replace(/([+\-*/])(\d+)(\()/g, '$1$2*$3');
         
-        // Convert the expression to pure math (no string concatenation)
-        // This is done by explicitly converting each number to a float
-        let pureExpression = '';
-        let numBuffer = '';
-        let lastChar = '';
+        // Remove any trailing operators to avoid syntax errors
+        expression = expression.replace(/[+\-*/]$/, '');
         
-        for (let i = 0; i < expression.length; i++) {
-            const char = expression.charAt(i);
-            
-            // Skip duplicate operators
-            if ((char === '+' || char === '-' || char === '*' || char === '/') && 
-                (lastChar === '+' || lastChar === '-' || lastChar === '*' || lastChar === '/')) {
-                continue;
-            }
-            
-            // Handle numbers
-            if (/[0-9.]/.test(char)) {
-                // If digit or decimal, add to number buffer
-                numBuffer += char;
-            } else {
-                // If operator or parenthesis
-                if (numBuffer !== '') {
-                    // Add number to formatted expression
-                    pureExpression += parseFloat(numBuffer);
-                    numBuffer = '';
-                }
-                
-                // Add implicit multiplication between number and opening parenthesis
-                if (char === '(' && lastChar !== '' && /[0-9)]/.test(lastChar)) {
-                    pureExpression += '*';
-                }
-                
-                // Add the operator or parenthesis
-                pureExpression += char;
-            }
-            
-            lastChar = char;
-        }
+        console.log("Cleaned expression:", expression);
         
-        // Add any remaining number
-        if (numBuffer !== '') {
-            pureExpression += parseFloat(numBuffer);
-        }
-        
-        console.log("Pure math expression:", pureExpression);
-        
-        // Verify the expression is valid
-        if (!/^[0-9+\-*/().]+$/.test(pureExpression)) {
-            throw new Error("Invalid characters in expression");
-        }
-        
-        // Calculate the result safely
-        const result = safeEval(pureExpression);
+        // Calculate the result using direct evaluation
+        // Use Function constructor for safer evaluation
+        const result = Function('"use strict"; return (' + expression + ')')();
         console.log("Calculated result:", result);
         
         // Ensure the result is a valid number
         if (!isFinite(result)) {
             throw new Error("Division by zero or other arithmetic error");
         }
+        
+        // Save to history before updating currentInput
+        addToHistory(expression, result);
         
         // Format result to avoid extremely long decimals but maintain precision
         if (Math.abs(result) > 10**14) {
@@ -683,6 +737,8 @@ function calculateExpression() {
     shouldResetScreen = true;
     parenthesesCount = 0;
     updateDisplay();
+    // Update history display if it's visible
+    updateHistoryDisplay();
 }
 
 /**
@@ -819,57 +875,47 @@ function handleEqual() {
     console.log("handleEqual called - currentInput:", currentInput, "previousInput:", previousInput);
     
     // Don't do anything if there's nothing to calculate
-    if (previousInput === '') {
+    if (previousInput === '' && currentInput === '0') {
         console.log("Nothing to calculate, returning");
         return;
     }
     
     // Add closing parentheses if needed
-    while (parenthesesCount > 0) {
-        previousInput += currentInput + ')';
-        parenthesesCount--;
-        console.log("Added closing parenthesis, new previousInput:", previousInput);
-    }
-    
-    // Store the final expression with the current input
     let finalExpression = previousInput;
     
-    // Only add currentInput if it's not already the last number in previousInput
-    // This is important for expressions like "2+3(12/6)" where we need to ensure
-    // the current input (which might be "0" due to how parentheses are processed)
-    // doesn't overwrite the actual last number in the expression
-    if (!previousInput.endsWith(currentInput) && 
-        currentInput !== '0' && 
-        !shouldResetScreen) {
+    // Add current input to the expression if needed
+    if (!finalExpression.endsWith(currentInput) && 
+        !shouldResetScreen && 
+        currentInput !== '0') {
         finalExpression += currentInput;
     }
     
-    // Remove trailing operators like +, -, *, / to prevent syntax errors
+    // Add closing parentheses if needed
+    while (parenthesesCount > 0) {
+        finalExpression += ')';
+        parenthesesCount--;
+        console.log("Added closing parenthesis, new finalExpression:", finalExpression);
+    }
+    
+    // Remove trailing operators to avoid syntax errors
     finalExpression = finalExpression.replace(/[+\-*/]$/, '');
     
     console.log("Final expression before calculation:", finalExpression);
     
-    // Display the equation in the history
+    // Update the expression display
     equationElement.textContent = finalExpression + '=';
     
-    // Calculate the result
+    // Store the expression for calculation
     previousInput = finalExpression;
     
-    // Use calculateExpression for all calculations to ensure proper order of operations
+    // Use calculateExpression for proper order of operations
     calculateExpression();
     
-    // Add calculating class to display for animation during calculation
+    // Add calculating class for visual feedback
     displayElement.classList.add('calculating');
     
     setTimeout(() => {
         displayElement.classList.remove('calculating');
-        
-        // After calculation, show success or error animation
-        if (isNaN(result)) {
-            animateCalculationError();
-        } else {
-            animateCalculationSuccess();
-        }
     }, 300);
 }
 
@@ -965,6 +1011,20 @@ function handleKeyboardInput(event) {
         handleFunction('sqrt');
         animateButton('[data-action="sqrt"]');
     }
+    // History (h key)
+    else if (event.key === 'h' || event.key === 'H') {
+        event.preventDefault();
+        // Check if history toggle button exists before toggling
+        const historyBtn = document.getElementById('history-toggle-btn');
+        if (historyBtn) {
+            // Add visual feedback for the button
+            historyBtn.classList.add('active-button');
+            setTimeout(() => {
+                historyBtn.classList.remove('active-button');
+            }, 200);
+            toggleHistory(); // Toggle the history panel
+        }
+    }
     // Memory functions
     else if (event.key === 'm' || event.key === 'M') {
         event.preventDefault();
@@ -1044,5 +1104,193 @@ function createQuantumBits() {
     calculator.appendChild(quantumBits);
 }
 
-// Initialize the calculator when DOM is fully loaded
-document.addEventListener('DOMContentLoaded', initCalculator); 
+/**
+ * Adds a calculation to the history
+ * @param {string} expression - The expression calculated
+ * @param {number} result - The result of the calculation
+ */
+function addToHistory(expression, result) {
+    // Format the result for display
+    let formattedResult;
+    if (Math.abs(result) > 10**14) {
+        formattedResult = result.toExponential(8);
+    } else {
+        formattedResult = Math.round(result * 10**12) / 10**12;
+    }
+    
+    // Add the calculation to history
+    calculationHistory.unshift({
+        expression: expression,
+        result: formattedResult,
+        timestamp: new Date().toLocaleTimeString()
+    });
+    
+    // Limit history to 10 items
+    if (calculationHistory.length > 10) {
+        calculationHistory.pop();
+    }
+    
+    // Update history display if it's visible
+    if (isHistoryVisible) {
+        updateHistoryDisplay();
+    }
+}
+
+/**
+ * Updates the history display with the current history
+ */
+function updateHistoryDisplay() {
+    const historyPanel = document.getElementById('history-panel');
+    if (!historyPanel) return;
+    
+    // Store the close button to reattach later
+    const closeButton = historyPanel.querySelector('.history-close-btn');
+    
+    // Clear existing history except close button
+    historyPanel.innerHTML = '';
+    
+    // Reattach close button
+    if (closeButton) {
+        historyPanel.appendChild(closeButton);
+    } else {
+        // Create close button if it doesn't exist
+        const newCloseButton = document.createElement('button');
+        newCloseButton.className = 'history-close-btn';
+        newCloseButton.innerHTML = '&times;';
+        newCloseButton.addEventListener('click', () => {
+            toggleHistory();
+        });
+        historyPanel.appendChild(newCloseButton);
+    }
+    
+    // Add history heading
+    const historyHeading = document.createElement('h3');
+    historyHeading.textContent = 'Calculation History';
+    historyPanel.appendChild(historyHeading);
+    
+    // Add clear history button
+    const clearButton = document.createElement('button');
+    clearButton.textContent = 'Clear History';
+    clearButton.className = 'history-clear-btn';
+    clearButton.addEventListener('click', clearHistory);
+    historyPanel.appendChild(clearButton);
+    
+    // Add history items
+    if (calculationHistory.length === 0) {
+        const emptyMessage = document.createElement('div');
+        emptyMessage.className = 'history-empty';
+        emptyMessage.textContent = 'No calculations yet';
+        historyPanel.appendChild(emptyMessage);
+    } else {
+        const historyList = document.createElement('div');
+        historyList.className = 'history-list';
+        
+        calculationHistory.forEach((item, index) => {
+            const historyItem = document.createElement('div');
+            historyItem.className = 'history-item';
+            
+            const itemHeader = document.createElement('div');
+            itemHeader.className = 'history-item-header';
+            itemHeader.textContent = `Calculation #${calculationHistory.length - index} • ${item.timestamp}`;
+            
+            const itemExpression = document.createElement('div');
+            itemExpression.className = 'history-item-expression';
+            itemExpression.textContent = item.expression;
+            
+            const itemResult = document.createElement('div');
+            itemResult.className = 'history-item-result';
+            itemResult.textContent = `= ${item.result}`;
+            
+            // Add recall button to use the result in current calculation
+            const recallButton = document.createElement('button');
+            recallButton.className = 'history-recall-btn';
+            recallButton.innerHTML = '<i class="fas fa-redo"></i>';
+            recallButton.title = 'Use this result';
+            recallButton.addEventListener('click', () => recallHistoryItem(item));
+            
+            historyItem.appendChild(itemHeader);
+            historyItem.appendChild(itemExpression);
+            historyItem.appendChild(itemResult);
+            historyItem.appendChild(recallButton);
+            historyList.appendChild(historyItem);
+        });
+        
+        historyPanel.appendChild(historyList);
+    }
+}
+
+/**
+ * Clears the calculation history
+ */
+function clearHistory() {
+    calculationHistory = [];
+    updateHistoryDisplay();
+}
+
+/**
+ * Recalls a history item to the current calculation
+ * @param {Object} item - The history item to recall
+ */
+function recallHistoryItem(item) {
+    currentInput = item.result.toString();
+    updateDisplay();
+    
+    // Close history panel after recalling an item for better UX
+    setTimeout(() => {
+        if (isHistoryVisible) {
+            toggleHistory();
+        }
+    }, 300);
+}
+
+/**
+ * Toggles the history panel visibility
+ */
+function toggleHistory() {
+    // Check if history panel already exists
+    let historyPanel = document.getElementById('history-panel');
+    
+    if (historyPanel && isHistoryVisible) {
+        // Hide history panel
+        historyPanel.classList.add('history-panel-hidden');
+        setTimeout(() => {
+            historyPanel.remove();
+        }, 300);
+        isHistoryVisible = false;
+    } else {
+        // Create and show history panel
+        if (!historyPanel) {
+            historyPanel = document.createElement('div');
+            historyPanel.id = 'history-panel';
+            historyPanel.className = 'history-panel history-panel-hidden';
+            document.body.appendChild(historyPanel); // Append to body for better positioning
+            
+            // Add close button for the history panel
+            const closeHistoryBtn = document.createElement('button');
+            closeHistoryBtn.className = 'history-close-btn';
+            closeHistoryBtn.innerHTML = '&times;';
+            closeHistoryBtn.addEventListener('click', () => {
+                toggleHistory(); // Call toggleHistory to close the panel
+            });
+            historyPanel.appendChild(closeHistoryBtn);
+            
+            // Force a reflow before adding the visible class
+            historyPanel.offsetHeight;
+        }
+        
+        // Update history content
+        updateHistoryDisplay();
+        
+        // Show panel with animation
+        setTimeout(() => {
+            historyPanel.classList.remove('history-panel-hidden');
+        }, 10);
+        
+        isHistoryVisible = true;
+    }
+}
+
+// DOM ready event listener
+document.addEventListener('DOMContentLoaded', () => {
+    initCalculator();
+}); 
