@@ -8,6 +8,7 @@ let parenthesesCount = 0;
 let memoryValue = 0; // Initialize memory value
 let calculationHistory = []; // Store calculation history
 let isHistoryVisible = false; // Track if history panel is visible
+let currentTheme = 'standard'; // Track current theme
 
 // DOM Elements
 const displayElement = document.getElementById('display');
@@ -51,7 +52,7 @@ function initCalculator() {
         });
     });
 
-    // Theme toggle functionality
+    // Theme toggle functionality (Light/Dark toggle)
     themeToggle.addEventListener('change', () => {
         document.body.classList.toggle('light-theme');
         playToggleSound();
@@ -61,6 +62,34 @@ function initCalculator() {
         setTimeout(() => {
             document.querySelector('.calculator').classList.remove('theme-transition');
         }, 500);
+        
+        // If theme selector exists, update it when toggle is used
+        const themeSelect = document.getElementById('theme-select');
+        if (themeSelect) {
+            if (document.body.classList.contains('light-theme')) {
+                themeSelect.value = 'light';
+                currentTheme = 'light';
+            } else {
+                themeSelect.value = 'standard';
+                currentTheme = 'standard';
+            }
+        }
+    });
+    
+    // Theme selector functionality
+    const themeSelect = document.getElementById('theme-select');
+    if (themeSelect) {
+        themeSelect.addEventListener('change', () => {
+            const selectedTheme = themeSelect.value;
+            applyTheme(selectedTheme);
+        });
+    }
+    
+    // Add keyboard shortcut for theme cycling (T key)
+    document.addEventListener('keydown', (e) => {
+        if (e.key.toLowerCase() === 't') {
+            cycleThemes();
+        }
     });
 
     // History toggle button
@@ -153,6 +182,133 @@ function initCalculator() {
 
     // Welcome animation
     playWelcomeAnimation();
+    
+    // Create history panel if it doesn't exist
+    createHistoryPanel();
+    
+    // Apply any saved theme preference
+    loadThemePreference();
+}
+
+/**
+ * Applies the selected theme to the calculator
+ * @param {string} theme - The theme to apply ('standard', 'light', or 'corporate')
+ */
+function applyTheme(theme) {
+    // Remove all theme classes first
+    document.body.classList.remove('light-theme', 'corporate-theme');
+    
+    // Apply the selected theme
+    if (theme === 'light') {
+        document.body.classList.add('light-theme');
+        // Ensure toggle switch matches
+        const themeToggle = document.getElementById('theme-toggle');
+        if (themeToggle) {
+            themeToggle.checked = true;
+        }
+    } else if (theme === 'corporate') {
+        document.body.classList.add('corporate-theme');
+        // Ensure toggle switch is off for corporate theme
+        const themeToggle = document.getElementById('theme-toggle');
+        if (themeToggle) {
+            themeToggle.checked = false;
+        }
+    } else {
+        // Standard theme - no additional classes
+        const themeToggle = document.getElementById('theme-toggle');
+        if (themeToggle) {
+            themeToggle.checked = false;
+        }
+    }
+    
+    // Add transition effect
+    document.querySelector('.calculator').classList.add('theme-transition');
+    setTimeout(() => {
+        document.querySelector('.calculator').classList.remove('theme-transition');
+    }, 500);
+    
+    // Save the theme preference
+    currentTheme = theme;
+    saveThemePreference(theme);
+    
+    // Play theme change sound
+    playToggleSound();
+}
+
+/**
+ * Cycles through available themes
+ */
+function cycleThemes() {
+    const themes = ['standard', 'light', 'corporate'];
+    let currentIndex = themes.indexOf(currentTheme);
+    let nextIndex = (currentIndex + 1) % themes.length;
+    const nextTheme = themes[nextIndex];
+    
+    // Update the theme selector dropdown
+    const themeSelect = document.getElementById('theme-select');
+    if (themeSelect) {
+        themeSelect.value = nextTheme;
+    }
+    
+    // Apply the next theme
+    applyTheme(nextTheme);
+}
+
+/**
+ * Saves the theme preference to localStorage
+ * @param {string} theme - The theme to save
+ */
+function saveThemePreference(theme) {
+    try {
+        localStorage.setItem('calculator-theme', theme);
+    } catch (e) {
+        console.error('Failed to save theme preference:', e);
+    }
+}
+
+/**
+ * Loads the theme preference from localStorage
+ */
+function loadThemePreference() {
+    try {
+        const savedTheme = localStorage.getItem('calculator-theme');
+        if (savedTheme) {
+            // Apply the saved theme
+            applyTheme(savedTheme);
+            // Update the dropdown
+            const themeSelect = document.getElementById('theme-select');
+            if (themeSelect) {
+                themeSelect.value = savedTheme;
+            }
+        }
+    } catch (e) {
+        console.error('Failed to load theme preference:', e);
+    }
+}
+
+/**
+ * Creates the history panel if it doesn't exist already
+ */
+function createHistoryPanel() {
+    if (!document.querySelector('.history-panel')) {
+        const historyPanel = document.createElement('div');
+        historyPanel.className = 'history-panel history-panel-hidden';
+        historyPanel.id = 'history-panel';
+        historyPanel.innerHTML = `
+            <button class="history-close-btn" id="history-close-btn">×</button>
+            <h3>Calculation History</h3>
+            <button class="history-clear-btn" id="history-clear-btn">Clear History</button>
+            <div class="history-list" id="history-list">
+                <div class="history-empty">No calculations yet</div>
+            </div>
+        `;
+        
+        document.body.appendChild(historyPanel);
+        
+        // Add event listeners
+        document.getElementById('history-close-btn').addEventListener('click', toggleHistory);
+        document.getElementById('history-clear-btn').addEventListener('click', clearHistory);
+    }
 }
 
 /**
@@ -931,120 +1087,80 @@ function handleClear() {
 }
 
 /**
- * Handles keyboard input for numbers and operations
+ * Handles keyboard input events
  * @param {KeyboardEvent} event - The keyboard event
  */
 function handleKeyboardInput(event) {
-    console.log("Key pressed:", event.key);
+    // Don't process keyboard inputs when typing in an input field
+    if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA' || event.target.tagName === 'SELECT') {
+        return;
+    }
     
-    // Numbers 0-9
-    if (/[0-9]/.test(event.key)) {
-        event.preventDefault();
-        handleNumber(event.key);
-        animateButton(`[data-number="${event.key}"]`);
-    }
-    // Decimal point
-    else if (event.key === '.') {
-        event.preventDefault();
+    // Determine which key was pressed
+    const key = event.key;
+    
+    // Add button animation when key is pressed
+    if (key >= '0' && key <= '9') {
+        animateButton(`button[data-number="${key}"]`);
+        handleNumber(key);
+    } else if (key === '.') {
+        animateButton(`button[data-number="."]`);
         handleNumber('.');
-        animateButton('[data-number="."]');
-    }
-    // Operators
-    else if (event.key === '+') {
-        event.preventDefault();
+    } else if (key === '+') {
+        animateButton('button[data-action="add"]');
         handleOperator('+');
-        animateButton('[data-action="add"]');
-    }
-    else if (event.key === '-') {
-        event.preventDefault();
+    } else if (key === '-') {
+        animateButton('button[data-action="subtract"]');
         handleOperator('-');
-        animateButton('[data-action="subtract"]');
-    }
-    else if (event.key === '*' || event.key === 'x' || event.key === 'X') {
-        event.preventDefault();
+    } else if (key === '*' || key === 'x' || key === 'X') {
+        animateButton('button[data-action="multiply"]');
         handleOperator('*');
-        animateButton('[data-action="multiply"]');
-    }
-    else if (event.key === '/' || event.key === '÷') {
-        event.preventDefault();
+    } else if (key === '/') {
+        animateButton('button[data-action="divide"]');
         handleOperator('/');
-        animateButton('[data-action="divide"]');
-    }
-    // Parentheses
-    else if (event.key === '(') {
-        event.preventDefault();
-        handleNumber('(');
-        animateButton('[data-number="("]');
-    }
-    else if (event.key === ')') {
-        event.preventDefault();
-        handleNumber(')');
-        animateButton('[data-number=")"]');
-    }
-    // Equal and Enter
-    else if (event.key === '=' || event.key === 'Enter') {
-        event.preventDefault();
+    } else if (key === '=' || key === 'Enter') {
+        animateButton('button[data-action="calculate"]');
         handleEqual();
-        animateButton('[data-action="calculate"]');
-    }
-    // Clear (Escape)
-    else if (event.key === 'Escape') {
-        event.preventDefault();
+        event.preventDefault(); // Prevent form submission if inside a form
+    } else if (key === 'Escape') {
+        animateButton('button[data-action="clear"]');
         handleClear();
-        animateButton('[data-action="clear"]');
-    }
-    // Backspace
-    else if (event.key === 'Backspace') {
-        event.preventDefault();
+    } else if (key === 'Backspace') {
+        animateButton('button[data-action="backspace"]');
         handleFunction('backspace');
-        animateButton('[data-action="backspace"]');
-    }
-    // Percent
-    else if (event.key === '%') {
-        event.preventDefault();
+    } else if (key === '%') {
+        animateButton('button[data-action="percent"]');
         handleFunction('percent');
-        animateButton('[data-action="percent"]');
-    }
-    // Square root (r key)
-    else if (event.key === 'r' || event.key === 'R') {
-        event.preventDefault();
+    } else if (key === '(' || key === ')') {
+        animateButton(`button[data-number="${key}"]`);
+        handleNumber(key);
+    } else if (key.toLowerCase() === 'r') {
+        animateButton('button[data-action="sqrt"]');
         handleFunction('sqrt');
-        animateButton('[data-action="sqrt"]');
-    }
-    // History (h key)
-    else if (event.key === 'h' || event.key === 'H') {
-        event.preventDefault();
-        // Check if history toggle button exists before toggling
-        const historyBtn = document.getElementById('history-toggle-btn');
-        if (historyBtn) {
-            // Add visual feedback for the button
-            historyBtn.classList.add('active-button');
-            setTimeout(() => {
-                historyBtn.classList.remove('active-button');
-            }, 200);
-            toggleHistory(); // Toggle the history panel
+    } else if (key.toLowerCase() === 'm') {
+        if (event.ctrlKey) {
+            // Ctrl+M for Memory Clear
+            animateButton('button[data-action="memory-clear"]');
+            handleFunction('memory-clear');
+        } else {
+            // M for Memory Recall
+            animateButton('button[data-action="memory-recall"]');
+            handleFunction('memory-recall');
         }
-    }
-    // Memory functions
-    else if (event.key === 'm' || event.key === 'M') {
-        event.preventDefault();
-        handleFunction('memory-recall');
-        animateButton('[data-action="memory-recall"]');
-    }
-    else if (event.ctrlKey && (event.key === 'm' || event.key === 'M')) {
-        event.preventDefault();
-        handleFunction('memory-clear');
-        animateButton('[data-action="memory-clear"]');
-    }
-    else if (event.shiftKey && (event.key === '+')) {
-        event.preventDefault();
+    } else if (key === '+' && event.shiftKey) {
+        // Shift+Plus for Memory Add (usually Shift+= on most keyboards)
+        animateButton('button[data-action="memory-add"]');
         handleFunction('memory-add');
-        animateButton('[data-action="memory-add"]');
-    }
-    else if (event.shiftKey && (event.key === '-')) {
-        event.preventDefault();
+    } else if (key === '_' && event.shiftKey) {
+        // Shift+Minus for Memory Subtract (usually Shift+- on most keyboards)
+        animateButton('button[data-action="memory-subtract"]');
         handleFunction('memory-subtract');
-        animateButton('[data-action="memory-subtract"]');
+    } else if (key.toLowerCase() === 'h') {
+        // H key to toggle history
+        toggleHistory();
+    } else if (key.toLowerCase() === 't') {
+        // T key to cycle through themes
+        cycleThemes();
     }
 }
 

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Futuristic Calculator - Unified Mentor</title>
+    <title>Futuristic Calculator</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Orbitron:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -21,6 +21,16 @@
                     <i class="fas fa-sun"></i>
                     <div class="ball"></div>
                 </label>
+            </div>
+            
+            <!-- Theme Selector -->
+            <div class="theme-selector">
+                <span class="theme-label">Theme:</span>
+                <select id="theme-select">
+                    <option value="standard">Standard</option>
+                    <option value="light">Light</option>
+                    <option value="corporate">Corporate</option>
+                </select>
             </div>
             
             <div class="calculator">
@@ -110,7 +120,7 @@
                     <li><i class="fas fa-square-root-alt"></i> Square root function</li>
                     <li><i class="fas fa-memory"></i> Memory functions (MC, MR, M+, M-)</li>
                     <li><i class="fas fa-history"></i> Calculation history</li>
-                    <li><i class="fas fa-sun"></i> Toggle between light and dark themes</li>
+                    <li><i class="fas fa-sun"></i> Toggle between themes (Standard/Light/Corporate)</li>
                     <li><i class="fas fa-backspace"></i> Backspace to delete last input</li>
                 </ul>
                 <div class="keyboard-shortcuts">
@@ -124,6 +134,7 @@
                     <div class="shortcut"><span>Shift+Plus</span> = Memory add</div>
                     <div class="shortcut"><span>Shift+Minus</span> = Memory subtract</div>
                     <div class="shortcut"><span>H</span> = Show/hide history</div>
+                    <div class="shortcut"><span>T</span> = Cycle through themes</div>
                 </div>
             </div>
         </div>
